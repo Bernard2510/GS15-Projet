@@ -3,6 +3,7 @@ import os
 def push_to_server(username,name,content):
     
     server_path=os.getcwd()+"\server"
+    user_path=os.path.join(server_path,username)
 
     #if server doesnt exist
     try:
@@ -10,8 +11,14 @@ def push_to_server(username,name,content):
     except OSError:
         pass
 
-    filename = username+"_"+name+".txt"
-    file_path=os.path.join(server_path,filename)
+    #if user folder doesnt exist
+    try:
+        os.mkdir(user_path)
+    except OSError:
+        pass
+    
+    filename = name+".txt"
+    file_path=os.path.join(user_path,filename)
     with open(file_path,mode='w') as file:
         file.write(content)
 
@@ -19,8 +26,9 @@ def push_to_server(username,name,content):
 def pull_from_server(username,name):
 
     server_path=os.getcwd()+"\server"
-    filename = username+"_"+name+".txt"
-    file_path=os.path.join(server_path,filename)
+    user_path=os.path.join(server_path,username)
+    filename = name+".txt"
+    file_path=os.path.join(user_path,filename)
     with open(file_path, mode='r') as file:
         lines = file.readlines()
         return lines[0]
@@ -28,12 +36,20 @@ def pull_from_server(username,name):
 def remove_from_server(username,name):
 
     server_path=os.getcwd()+"\server"
-    filename = username+"_"+name+".txt"
-    file_path=os.path.join(server_path,filename)
+    user_path=os.path.join(server_path,username)
+    filename = name+".txt"
+    file_path=os.path.join(user_path,filename)
     os.remove(file_path)
+
+def remove_user(username):
+
+    server_path=os.getcwd()+"\server"
+    user_path=os.path.join(server_path,username)
+    os.rmdir(user_path)
 
 
 push_to_server("test","cle","123")
 print(pull_from_server("test","cle"))
 remove_from_server("test","cle")
+remove_user("test")
 

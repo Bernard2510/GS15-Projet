@@ -24,5 +24,27 @@ def randomNum(bit): #xorshift a revoir
     O = u^(t^(t>>4))
     return O
 
-abricot= Utilisateur("erere")
-print(abricot.age,abricot.name)
+#abricot= Utilisateur("erere")
+#print(abricot.age,abricot.name)
+
+def xor(x, y):
+    return 
+
+def sha256(data):
+    return sha
+
+def concat(x,y):
+    return
+
+def hmac_sha256(chainkey,data):
+    ipad=hex(0x36)
+    opad=hex(0x5c)
+    i_key_pad=xor(chainkey,ipad)
+    o_key_pad=xor(chainkey,opad)
+    hash_sum_1=sha256(concat(i_key_pad,data))
+    hash_sum_2=sha256(concat(o_key_pad,hash_sum_1))
+
+    return hash_sum_2
+
+
+#hmac_sha256(1,1)
