@@ -43,8 +43,8 @@ def hmac_sha256(chainkey,data):
     i_key_pad=chainkey^int(ipad, base=16)
     o_key_pad=chainkey^int(opad, base=16)
 
-    hash_sum_1=hashlib.sha256(concat(i_key_pad,data)) #note : implementer sha256
-    hash_sum_2=hashlib.sha256(concat(o_key_pad,hash_sum_1))
+    hash_sum_1=hashlib.sha256(str(concat(i_key_pad,data)).encode('ASCII')).hexdigest() #note : implementer sha256
+    hash_sum_2=hashlib.sha256(str(concat(o_key_pad,int(hash_sum_1, base=16))).encode('ASCII')).hexdigest()
 
     #retour cle de com (pour le chiffrement)
     #retour cle chaine pour la prochaine iteration du hmac
@@ -52,4 +52,4 @@ def hmac_sha256(chainkey,data):
 
 #Message Key = HMAC-SHA256(Chain Key, 0x01).
 #Chain Key = HMAC-SHA256(Chain Key, 0x02)
-hmac_sha256(1,1)
+print(hmac_sha256(1,1))
