@@ -1,5 +1,7 @@
 import random
 import hashlib
+import secrets
+from random import randrange
 
 class Utilisateur:
 
@@ -58,22 +60,130 @@ def hmac_sha256(chainkey,data):
 # print(m)
 
 
-def signRSA(priv_key,M):
+# def signRSA(priv_key,M):
 
-    p=random_prime() #ou fixe ?
-    q=random_prime()
-    n=p*q
+#     p=random_prime() #ou fixe ?
+#     q=random_prime()
+#     n=p*q
 
-    while (n%priv_key==0): #ou verifer premier entre eux
-        p=random_prime()
-        q=random_prime()
-        n=p*q
+#     while (n%priv_key==0): #ou verifer premier entre eux
+#         p=random_prime()
+#         q=random_prime()
+#         n=p*q
 
-    S=M**priv_key % n
-    return S
+#     S=M**priv_key % n
+#     return S
 
-def initRSAkey():
-    return 
+# def initRSAkey():
+#     return 
+
+def quotient(a,b):
+    return a // b
+
+def reste(a,b):
+    return a % b
+
+def bezout(a,b):
+    r0=a
+    r1=b
+    q=0
+    r2=1
+
+    x0=1
+    x1=0
+    y0=0
+    y1=1
+
+    n=0
+
+    while(r2!=0):
+        q=quotient(r0,r1)
+        r2=reste(r0,r1)
+        r0=r1
+        r1=r2
+
+        x = q * x1 + x0
+        x0 = x1
+        x1 = x
+
+        y = q * y1 + y0
+        y0 = y1
+        y1 = y
+
+        n=n+1
+
+    x = x0 * (-1)**n
+    y = y0 * (-1)**(n+1)
+    #print("pgcd : ", r0)
+    #print("n : ", n)
+    #print("x : ", x)
+    #print("y : ", y)
+    inverse=x%b
+    print("inverse : ", x % b)
+    return inverse
+
+
+
+def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itérations de l'algo
+    if n==2 or n==3:
+        return True
+    if n%2==0:
+        return False
+    r=0
+    s=n-1
+
+    while s%2==0:
+        r+=1
+        s//=2
+
+    for i in range(k):
+        a=randrange(2,n-1)
+        x=pow(a,s,n)
+        if x==1 or x==n-1:
+            continue
+        
+        for i in range(r-1):
+            x=pow(x,2,n)
+            if x==n-1:
+                break
+        else:
+            return False
+    
+    return True
+
+def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
+    
+    nombreAlea = secrets.randbits(longueur)
+    
+    while rabin_miller(nombreAlea,25)==False:
+        nombreAlea = secrets.randbits(longueur)   #revoir génération nombre aléa 
+    
+    prime=nombreAlea
+    print("prime :",prime)
+   
+    return prime
+
+def genkeyDSA(L,N):
+    L=2068
+    N=256
+
+    #q = gen_prime(N) #256
+    p = gen_prime(L) #2068
+    k=2
+    inverse=pow(k,-1,p)
+    q=((p-1)*inverse)%p
+    while rabin_miller(q,8)==False:
+        p=gen_prime(L)
+        print("q :",q)
+        print("inv: ",inverse)
+    print("q",q)
+    return q
+genkeyDSA(2068,256)
+
+def signDSA(priv_key,M):
+    return s1,s2
+
 #Message Key = HMAC-SHA256(Chain Key, 0x01).
 #Chain Key = HMAC-SHA256(Chain Key, 0x02)
-print(hmac_sha256(1,1))
+# print(hmac_sha256(1,1))
+
