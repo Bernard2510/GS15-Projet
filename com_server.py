@@ -23,7 +23,7 @@ def push_to_server(username,name,content):
         file.write(content)
 
 
-def pull_from_server(username,name):
+def fetch_from_server(username,name):
 
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
@@ -49,7 +49,7 @@ def remove_user(username):
 
 
 push_to_server("test","cle","123")
-print(pull_from_server("test","cle"))
+print(fetch_from_server("test","cle"))
 remove_from_server("test","cle")
 remove_user("test")
 
