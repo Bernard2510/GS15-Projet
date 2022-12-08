@@ -1,0 +1,57 @@
+1) Initialisation des clés
+Soit on génère un p (2048 bits) et un générateur g, soit on les prends sur internet
+https://www.codespeedy.com/elgamal-encryption-algorithm-in-python/
+
+couple pub/priv :
+A=g^a 
+Avec a privée et A publique
+
+
+Alice
+Clés d'identité :
+Génère IDApub (2048 bits) (condition pour DSA ?)
+Génère IDApriv (2048 bits)
+
+Pré-clé :
+Génère SPKpub
+Signe SPKpub avec IDApriv DSA
+Génère SPKpriv
+
+One time clé :
+Génère couple pub/priv [OtPK1,...OtPKn]
+
+Ephémère : ?
+Génère couple pub/priv EphApub, EphApriv
+
+
+2) Publication bundle
+Publie sur le serveur 
+{IDApub, SPKApub, Signature(SPKApub par IDApriv),OtPKA}
+
+3) Bob se connecte
+- crée ses clés
+- publie sur le serveur
+- récupère bundle Alice (une seule OtPKAn choisie par le serveur et supp du bundle d'Alice)
+- verification signature SPKpub avec IDApub
+
+4) Bob calcul SK 
+- génère EphBpub,priv (grand entier aléatoire)
+DH1
+DH2
+DH3
+DH4
+SK
+
+5) Bob envoi a Alice
+-IDBpub (Alice verifie sur le serveur)
+-EphBpub
+-numero n de la OtPKAn utilise
+
+6) Alice calcul SK
+
+
+--------------------------------
+DSA
+
+ x (private key) from the list (1…….q-1) = IDApriv
+ public key, y=g^(x)*mod(p). = IDApub

@@ -28,23 +28,26 @@ def randomNum(bit): #xorshift a revoir
 #abricot= Utilisateur("erere")
 #print(abricot.age,abricot.name)
 
-def xor(x, y):
-    return 
 
-def sha256(data):
-    return sha
+#def sha256(data):
+#    return sha
 
 def concat(x,y):
-    return
+    c_x=str(x)
+    c_y=str(y)
+    return (int(c_x+c_y))
 
 def hmac_sha256(chainkey,data):
     ipad=hex(0x36)
     opad=hex(0x5c)
-    i_key_pad=xor(chainkey,ipad)
-    o_key_pad=xor(chainkey,opad)
-    hash_sum_1=sha256(concat(i_key_pad,data))
-    hash_sum_2=sha256(concat(o_key_pad,hash_sum_1))
+    i_key_pad=chainkey^int(ipad, base=16)
+    o_key_pad=chainkey^int(opad, base=16)
 
+    hash_sum_1=hashlib.sha256(str(concat(i_key_pad,data)).encode('ASCII')).hexdigest() #note : implementer sha256
+    hash_sum_2=hashlib.sha256(str(concat(o_key_pad,int(hash_sum_1, base=16))).encode('ASCII')).hexdigest()
+
+    #retour cle de com (pour le chiffrement)
+    #retour cle chaine pour la prochaine iteration du hmac
     return hash_sum_2
 
 
@@ -71,3 +74,6 @@ def signRSA(priv_key,M):
 
 def initRSAkey():
     return 
+#Message Key = HMAC-SHA256(Chain Key, 0x01).
+#Chain Key = HMAC-SHA256(Chain Key, 0x02)
+print(hmac_sha256(1,1))
