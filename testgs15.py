@@ -3,6 +3,7 @@ import hashlib
 import secrets
 from random import randrange
 
+
 class Utilisateur:
 
     def __init__(self,username):
@@ -163,7 +164,7 @@ def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
    
     return prime
 
-def genkeyDSA(L,N):
+def genkeyDSA(L,N): #a revoir algo trop long
     L=2068
     N=256
 
@@ -177,11 +178,89 @@ def genkeyDSA(L,N):
         print("q :",q)
         print("inv: ",inverse)
     print("q",q)
+
+    h = randrange(1,p-1)
+    g = pow(h,k)%p
+    while g<1:
+            h = randrange(1,p-1)
+            print(h)
+    x = randrange(0,q)
+    y = pow(g,x)%p
+
     return q
-genkeyDSA(2068,256)
+
 
 def signDSA(priv_key,M):
+
+    #Etape génération de clés
+
+    p = 47 #2068  #à générer avec l'algorithme au dessus
+    print(rabin_miller(p,25))
+    q = 23 #256   #à générer avec l'algorithme au dessus
+    print(rabin_miller(q,25))
+    k = 2
+    if(p-1==k*q):
+        print("good")
+    h = randrange(1,p-1)
+    g = pow(h,k)%p
+    while g<1:
+            h = randrange(1,p-1)
+            print(h)
+    x = randrange(0,q) #clé privée
+    y = pow(g,x,p)
+
+    print("p:",p)
+    print("q:",q)
+    print("g:",g)
+    print("y:",y)   #clé publique
+
+    #Etape de signature
+    s = randrange(1,q)
+    s1 = pow(g,s)%p%q
+    hash = int(hashlib.sha1(b"123456").hexdigest(),16)
+    s2 = (hash%q+s1*x)*pow(s,-1,q)%q #changer 123456 par variable
+    print("s :",s)
+    print("s1: ",s1)
+    print("s2 :",s2)
+    while (s1==0 & s2==0):
+        s = randrange(2,q-1)
+        s1 = (pow(g,s)%p)%q
+        s2 = (hash%q+s1*x)*pow(s,-1,q)%q
+    print("s :",s)
+    print("s1: ",s1)
+    print("s2 :",s2)
+
+    #verif
+    w = pow(s2,-1,q)
+    print(hash)
+    u1 = (hash*w)%q
+    u2 = (s1*w)%q
+    v= (pow(g,u1,p)*pow(y,u2,p)%p)%q
+    print("w: ",w)
+    print("u1 :",u1)
+    print("u2 :",u2)
+    print("v: ",v)
+
     return s1,s2
+
+signDSA(0,"123456")
+
+
+def verifDSA(s1,s2,p,q,g,y):
+    # if (s10 & s1<q) | (s2>0 & s2<q):
+    #     print("erreur")
+    #     return
+    w = pow(s2,-1,q)
+    u1 = (int(hashlib.sha256(b"123456").hexdigest(),16)*w)%q
+    u2 = (s1*w)%q
+    v= (pow(g,u1)*pow(y,u2)%p)%q
+    print("v: ",v)
+    return
+
+
+
+
+
 
 #Message Key = HMAC-SHA256(Chain Key, 0x01).
 #Chain Key = HMAC-SHA256(Chain Key, 0x02)
