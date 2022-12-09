@@ -15,7 +15,6 @@ class Utilisateur:
         self.otPK = [] #liste de clés one time session
 
 
-
 def randomNum(bit): #xorshift a revoir
     blocBit = bit
     w = random.getrandbits(blocBit)
@@ -28,12 +27,6 @@ def randomNum(bit): #xorshift a revoir
     O = u^(t^(t>>4))
     return O
 
-#abricot= Utilisateur("erere")
-#print(abricot.age,abricot.name)
-
-
-#def sha256(data):
-#    return sha
 
 def concat(x,y):
     c_x=str(x)
@@ -187,8 +180,8 @@ def genkeyDSA(L,N): #a revoir algo trop long
     x = randrange(0,q)
     y = pow(g,x)%p
 
-    return q
-
+    return p,q,x,y,g,h
+#REVOIR LES RETOURS ET PARAMETRES DES FONCTIONS
 
 def signDSA(priv_key,M): #Revoir hashmac et génération nombre générateur
 
