@@ -190,7 +190,7 @@ def genkeyDSA(L,N): #a revoir algo trop long
     return q
 
 
-def signDSA(priv_key,M):
+def signDSA(priv_key,M): #Revoir hashmac et génération nombre générateur
 
     #Etape génération de clés
 
@@ -219,18 +219,17 @@ def signDSA(priv_key,M):
     s1 = pow(g,s)%p%q
     hash = int(hashlib.sha1(b"123456").hexdigest(),16)
     s2 = (hash%q+s1*x)*pow(s,-1,q)%q #changer 123456 par variable
-    print("s :",s)
-    print("s1: ",s1)
-    print("s2 :",s2)
+
     while (s1==0 & s2==0):
         s = randrange(2,q-1)
         s1 = (pow(g,s)%p)%q
         s2 = (hash%q+s1*x)*pow(s,-1,q)%q
+
     print("s :",s)
     print("s1: ",s1)
     print("s2 :",s2)
 
-    #verif
+    #verification signature
     w = pow(s2,-1,q)
     print(hash)
     u1 = (hash*w)%q
@@ -243,20 +242,18 @@ def signDSA(priv_key,M):
 
     return s1,s2
 
-signDSA(0,"123456")
-
-
-def verifDSA(s1,s2,p,q,g,y):
-    # if (s10 & s1<q) | (s2>0 & s2<q):
-    #     print("erreur")
-    #     return
+def verifDSA(s1,s2,p,q,g,y,hash):
+    if (s1<0 | s1>q) & (s2<0 & s2>q):
+        print("erreur")
+        return False
     w = pow(s2,-1,q)
-    u1 = (int(hashlib.sha256(b"123456").hexdigest(),16)*w)%q
+    u1 = (hash*w)%q
     u2 = (s1*w)%q
     v= (pow(g,u1)*pow(y,u2)%p)%q
     print("v: ",v)
-    return
+    return True
 
+signDSA(0,"123456")
 
 
 
