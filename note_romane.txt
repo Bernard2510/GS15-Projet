@@ -1,4 +1,4 @@
-1) Initialisation des clés
+1) Initialisation des clés (a refaire a chaque fois que pre cle signe changé ?)
 Soit on génère un p (2048 bits) et un générateur g, soit on les prends sur internet
 https://www.codespeedy.com/elgamal-encryption-algorithm-in-python/
 
@@ -20,9 +20,6 @@ Génère SPKpriv
 One time clé :
 Génère couple pub/priv [OtPK1,...OtPKn]
 
-Ephémère : ?
-Génère couple pub/priv EphApub, EphApriv
-
 
 2) Publication bundle
 Publie sur le serveur 
@@ -31,7 +28,7 @@ Publie sur le serveur
 3) Bob se connecte
 - crée ses clés
 - publie sur le serveur
-- récupère bundle Alice (une seule OtPKAn choisie par le serveur et supp du bundle d'Alice)
+- récupère bundle Alice (une seule OtPKAn choisie par le serveur et supp du bundle d'Alice apres calcul SK par Alice)
 - verification signature SPKpub avec IDApub
 
 4) Bob calcul SK 
@@ -47,7 +44,9 @@ SK
 -EphBpub
 -numero n de la OtPKAn utilise
 
+
 6) Alice calcul SK
+(supp OtPKAn utilise et genere une nouvelle)
 
 
 --------------------------------
