@@ -1,5 +1,8 @@
 import random
 import hashlib
+import secrets
+from random import randrange
+
 
 class Utilisateur:
 
@@ -10,7 +13,6 @@ class Utilisateur:
         self.preSignPubKey = "" #clé publique présignée
         self.preSignPrivKey = "" #clé privée présignée
         self.otPK = [] #liste de clés one time session
-
 
 
 def randomNum(bit): #xorshift a revoir
@@ -25,12 +27,6 @@ def randomNum(bit): #xorshift a revoir
     O = u^(t^(t>>4))
     return O
 
-#abricot= Utilisateur("erere")
-#print(abricot.age,abricot.name)
-
-
-#def sha256(data):
-#    return sha
 
 def concat(x,y):
     c_x=str(x)
@@ -50,6 +46,213 @@ def hmac_sha256(chainkey,data):
     #retour cle chaine pour la prochaine iteration du hmac
     return hash_sum_2
 
+
+#hmac_sha256(1,1)
+# a = 123456789
+# print(a)
+# m = hashlib.sha256(str(a).encode('ASCII')).hexdigest()
+# print(m)
+
+
+# def signRSA(priv_key,M):
+
+#     p=random_prime() #ou fixe ?
+#     q=random_prime()
+#     n=p*q
+
+#     while (n%priv_key==0): #ou verifer premier entre eux
+#         p=random_prime()
+#         q=random_prime()
+#         n=p*q
+
+#     S=M**priv_key % n
+#     return S
+
+# def initRSAkey():
+#     return 
+
+def quotient(a,b):
+    return a // b
+
+def reste(a,b):
+    return a % b
+
+def bezout(a,b):
+    r0=a
+    r1=b
+    q=0
+    r2=1
+
+    x0=1
+    x1=0
+    y0=0
+    y1=1
+
+    n=0
+
+    while(r2!=0):
+        q=quotient(r0,r1)
+        r2=reste(r0,r1)
+        r0=r1
+        r1=r2
+
+        x = q * x1 + x0
+        x0 = x1
+        x1 = x
+
+        y = q * y1 + y0
+        y0 = y1
+        y1 = y
+
+        n=n+1
+
+    x = x0 * (-1)**n
+    y = y0 * (-1)**(n+1)
+    #print("pgcd : ", r0)
+    #print("n : ", n)
+    #print("x : ", x)
+    #print("y : ", y)
+    inverse=x%b
+    print("inverse : ", x % b)
+    return inverse
+
+
+
+def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itérations de l'algo
+    if n==2 or n==3:
+        return True
+    if n%2==0:
+        return False
+    r=0
+    s=n-1
+
+    while s%2==0:
+        r+=1
+        s//=2
+
+    for i in range(k):
+        a=randrange(2,n-1)
+        x=pow(a,s,n)
+        if x==1 or x==n-1:
+            continue
+        
+        for i in range(r-1):
+            x=pow(x,2,n)
+            if x==n-1:
+                break
+        else:
+            return False
+    
+    return True
+
+def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
+    
+    nombreAlea = secrets.randbits(longueur)
+    
+    while rabin_miller(nombreAlea,25)==False:
+        nombreAlea = secrets.randbits(longueur)   #revoir génération nombre aléa 
+    
+    prime=nombreAlea
+    print("prime :",prime)
+   
+    return prime
+
+def genkeyDSA(L,N): #a revoir algo trop long
+    L=2068
+    N=256
+
+    #q = gen_prime(N) #256
+    p = gen_prime(L) #2068
+    k=2
+    inverse=pow(k,-1,p)
+    q=((p-1)*inverse)%p
+    while rabin_miller(q,8)==False:
+        p=gen_prime(L)
+        print("q :",q)
+        print("inv: ",inverse)
+    print("q",q)
+
+    h = randrange(1,p-1)
+    g = pow(h,k)%p
+    while g<1:
+            h = randrange(1,p-1)
+            print(h)
+    x = randrange(0,q)
+    y = pow(g,x)%p
+
+    return p,q,x,y,g,h
+#REVOIR LES RETOURS ET PARAMETRES DES FONCTIONS
+
+def signDSA(priv_key,M): #Revoir hashmac et génération nombre générateur
+
+    #Etape génération de clés
+
+    p = 47 #2068  #à générer avec l'algorithme au dessus
+    print(rabin_miller(p,25))
+    q = 23 #256   #à générer avec l'algorithme au dessus
+    print(rabin_miller(q,25))
+    k = 2
+    if(p-1==k*q):
+        print("good")
+    h = randrange(1,p-1)
+    g = pow(h,k)%p
+    while g<1:
+            h = randrange(1,p-1)
+            print(h)
+    x = randrange(0,q) #clé privée
+    y = pow(g,x,p)
+
+    print("p:",p)
+    print("q:",q)
+    print("g:",g)
+    print("y:",y)   #clé publique
+
+    #Etape de signature
+    s = randrange(1,q)
+    s1 = pow(g,s)%p%q
+    hash = int(hashlib.sha1(b"123456").hexdigest(),16)
+    s2 = (hash%q+s1*x)*pow(s,-1,q)%q #changer 123456 par variable
+
+    while (s1==0 & s2==0):
+        s = randrange(2,q-1)
+        s1 = (pow(g,s)%p)%q
+        s2 = (hash%q+s1*x)*pow(s,-1,q)%q
+
+    print("s :",s)
+    print("s1: ",s1)
+    print("s2 :",s2)
+
+    #verification signature
+    w = pow(s2,-1,q)
+    print(hash)
+    u1 = (hash*w)%q
+    u2 = (s1*w)%q
+    v= (pow(g,u1,p)*pow(y,u2,p)%p)%q
+    print("w: ",w)
+    print("u1 :",u1)
+    print("u2 :",u2)
+    print("v: ",v)
+
+    return s1,s2
+
+def verifDSA(s1,s2,p,q,g,y,hash):
+    if (s1<0 | s1>q) & (s2<0 & s2>q):
+        print("erreur")
+        return False
+    w = pow(s2,-1,q)
+    u1 = (hash*w)%q
+    u2 = (s1*w)%q
+    v= (pow(g,u1)*pow(y,u2)%p)%q
+    print("v: ",v)
+    return True
+
+signDSA(0,"123456")
+
+
+
+
+
 #Message Key = HMAC-SHA256(Chain Key, 0x01).
 #Chain Key = HMAC-SHA256(Chain Key, 0x02)
-print(hmac_sha256(1,1))
+# print(hmac_sha256(1,1))
+

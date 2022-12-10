@@ -61,9 +61,9 @@ def rabin_miller(n,k):
     return True
 
 
-print("Eratosthene : ",eratosthene(5))
-print("Fermat : ",fermat(5,2))
-print("Rabin-Miller : ",rabin_miller(5,2))
+#print("Eratosthene : ",eratosthene(5))
+#print("Fermat : ",fermat(5,2))
+print("Rabin-Miller : ",rabin_miller(169889568463,25))
 
 """
 revoir fermat ex 1999
