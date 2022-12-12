@@ -140,8 +140,6 @@ def x3dh_sender(sender, receiver):
 
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
-    print(SK)
-    print("---")
     sender.SK=SK
     #supp DH1, 2, 3, 4 et EphPrivK, EphPubK
     x3dh_receiver(sender.idPubKey, EphPubK, receiverBundle.n, receiver) 
@@ -154,7 +152,6 @@ def x3dh_receiver(sender_idPubK, sender_EphPubK, n, receiver):
     DH4 = DH(receiver.otPrivKey[n],sender_EphPubK)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
-    print(SK)
     receiver.SK=SK
     #supp DH1, 2, 3, 4 et EphPrivK, EphPubK
 
@@ -165,37 +162,33 @@ class SymmRatchet:
     def __init__(self, key):
         self.chainKey = key
 
-    """
-    def next(self, inp=b''):
-        # turn the ratchet, changing the state and yielding a new key and IV
-        output = hkdf(self.state + inp, 80)
-        self.state = output[:32]
-        outkey, iv = output[32:64], output[64:]
-        return outkey, iv
-    """
-
 
 def init_ratchets(user,order):
     # initialise the root chain with the shared key
     user.rootRatchet = SymmRatchet(user.SK)
     # initialise the sending and recving chains
     if order == 1:
-        user.sendRatchet = SymmRatchet(turn_ratchet_root(user.rootRatchet,user.rootRatchet.chainKey))
-        user.recvRatchet = SymmRatchet(turn_ratchet_root(user.rootRatchet,user.rootRatchet.chainKey))
+        user.sendRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
+        user.recvRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
     else:
-        user.recvRatchet = SymmRatchet(turn_ratchet_root(user.rootRatchet,user.rootRatchet.chainKey))
-        user.sendRatchet = SymmRatchet(turn_ratchet_root(user.rootRatchet,user.rootRatchet.chainKey))
+        user.recvRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
+        user.sendRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
+    # initialise DH key
+    user.RPrivKey, user.RPubKey = gen_key_pair()
+    push_to_server(user.name,"RPubKey",user.RPubKey)
 
-def turn_ratchet_root(ratchet,key):
+
+def turn_ratchet(ratchet):
     C1="0x01"
     C2="0x02"
-    messageKey = create_sha256_signature(key,C1)
-    ratchet.chainKey = create_sha256_signature(key,C2)
+    messageKey = create_sha256_signature(ratchet.chainKey,C1)
+    ratchet.chainKey = create_sha256_signature(ratchet.chainKey,C2)
     return messageKey
 
-def turn_ratchet(ratchet,key,data):
-    messageKey = create_sha256_signature(key,data)
-    ratchet.chainKey = create_sha256_signature(key,data)
+def turn_ratchet_DH(ratchet,dh):
+    output = create_sha256_signature(ratchet.chainKey,str(dh))
+    ratchet.chainKey = output[:32]
+    messageKey = output[32:]
     return messageKey
 
 MAX_OTPK=5
@@ -211,49 +204,37 @@ x3dh_sender(bob,alice)
 init_ratchets(alice,1)
 init_ratchets(bob,2)
 
-print('\nAlice send ratchet:', turn_ratchet_root(alice.sendRatchet, alice.sendRatchet.chainKey))
-print('\nBob recv ratchet:', turn_ratchet_root(bob.recvRatchet, bob.recvRatchet.chainKey))
-print('\nAlice recv ratchet:', turn_ratchet_root(alice.recvRatchet, alice.recvRatchet.chainKey))
-print('\nBob send ratchet:', turn_ratchet_root(bob.sendRatchet, bob.sendRatchet.chainKey))
+
+
+def sendMessage(sender,receiverName,message):
+    sender.RPrivKey, sender.RPubKey = gen_key_pair()
+    push_to_server(sender.name,"RPubKey",sender.RPubKey)
+    receiverPubKey=fetch_from_server(receiverName,"RPubKey")
+    RDH=DH(sender.RPrivKey,receiverPubKey)
+    push_to_server(sender.name,"Message",message)
+    sender.sendRatchet.chainKey=turn_ratchet_DH(sender.rootRatchet,RDH)
+    messageKey=turn_ratchet(sender.sendRatchet)
+    return message+messageKey
+
+
+def receiveMessage(receiver,senderName):
+    message=fetch_from_server(senderName,"Message")
+    senderPubKey=fetch_from_server(senderName,"RPubKey")
+    RDH=DH(receiver.RPrivKey,senderPubKey)
+    #decode message
+    receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
+    messageKey=turn_ratchet(receiver.recvRatchet)
+    receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
+    push_to_server(receiver.name,"RPubKey",receiver.RPubKey)
+    return message, messageKey
+
+
+print(sendMessage(bob,alice.name,"hello"))
+print(receiveMessage(alice,bob.name))
+print(sendMessage(alice,bob.name,"bonjour"))
+print(receiveMessage(bob,alice.name))
 
 
 
-
-def RatchetKeyPair(user,receivePubKey=0):
-    if (user.RPrivKey=="" and user.RPrubKey==""):
-        RPrivK,RPubK = gen_key_pair()
-    else:
-        DHK=DH(RPrivK, receivePubKey)
-    return RPubK, DHK
-
-    #return RPrivK,RPubK
-    #send RpubK to Alice
-
-
-RBPriv, RBPub = gen_key_pair()
-RAPriv, RAPub = gen_key_pair()
-
-DHA=DH(RAPriv,RBPub) #envoie message
-#bob recoit message
-DHB=DH(RBPriv,RAPub)
-
-#print(DHA)
-#print(DHB)
-print(turn_ratchet(alice.sendRatchet, alice.sendRatchet.chainKey,str(DHA)))
-print(turn_ratchet(bob.recvRatchet, bob.recvRatchet.chainKey,str(DHB)))
-
-
-"""
-RB bob genere et envoi
-
-RA, DH(RA,RB) alice genere et envoi, turn sym
-DH(RA,RB) bob turn recv
-
-RB', DH(RB',RA) bob send
-DH(RA,RB') alice recv
-
-genere et envoi DH
-message env
-"""
 
 
