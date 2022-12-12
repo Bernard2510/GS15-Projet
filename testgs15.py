@@ -123,6 +123,10 @@ def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itération
         return True
     if n%2==0:
         return False
+
+    if n > 31:
+        if n%3==0 or n%5==0 or n%7==0 or n%11==0 or n%13==0 or n%17==0 or n%19==0 or n%23==0 or n%29==0 or n%31==0:
+            return False    
     r=0
     s=n-1
 
@@ -153,15 +157,15 @@ def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
         nombreAlea = secrets.randbits(longueur)   #revoir génération nombre aléa 
     
     prime=nombreAlea
-    print("prime :",prime)
+    #print("prime :",prime)
    
     return prime
 
-def genkeyDSA(L,N): #a revoir algo trop long
+def genkeyDSA(L,N): #a revoir algo trop long à process
     L=2068
     N=256
 
-    #q = gen_prime(N) #256
+    #q = gen_prime(N) #256 ----- génération safe prime trop long à revoir
     p = gen_prime(L) #2068
     k=2
     inverse=pow(k,-1,p)
@@ -180,12 +184,12 @@ def genkeyDSA(L,N): #a revoir algo trop long
     x = randrange(0,q)
     y = pow(g,x)%p
 
-    return p,q,x,y,g,h
-#REVOIR LES RETOURS ET PARAMETRES DES FONCTIONS
+    return p,q,g,y,x
+    #p,q,g,y = clé publique et x = clé privé, h est le hache du message
 
-def signDSA(priv_key,M): #Revoir hashmac et génération nombre générateur
+def signDSA(p,q,g,x,M): #Revoir hashmac et génération nombre générateur
 
-    #Etape génération de clés
+    #Etape génération de clés (test on peut enlever ça plus tard)
 
     p = 47 #2068  #à générer avec l'algorithme au dessus
     print(rabin_miller(p,25))
@@ -233,26 +237,34 @@ def signDSA(priv_key,M): #Revoir hashmac et génération nombre générateur
     print("u2 :",u2)
     print("v: ",v)
 
-    return s1,s2
+    return s1,s2,hash
 
 def verifDSA(s1,s2,p,q,g,y,hash):
+   
     if (s1<0 | s1>q) & (s2<0 & s2>q):
         print("erreur")
         return False
+    
     w = pow(s2,-1,q)
     u1 = (hash*w)%q
     u2 = (s1*w)%q
     v= (pow(g,u1)*pow(y,u2)%p)%q
     print("v: ",v)
+
     return True
 
-signDSA(0,"123456")
-
-
-
+#signDSA(0,"123456")
 
 
 #Message Key = HMAC-SHA256(Chain Key, 0x01).
 #Chain Key = HMAC-SHA256(Chain Key, 0x02)
 # print(hmac_sha256(1,1))
 
+def gensafeprime():
+    while True:
+        p = gen_prime(2048)
+        if rabin_miller((p-1)/2,10)==True:
+            print("p : ",p)
+            return p
+
+gensafeprime()
