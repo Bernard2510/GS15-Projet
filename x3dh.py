@@ -32,7 +32,6 @@ class Bundle:
         self.n = "" #numéro one time key utilisee
 
 def push_to_server(username,name,content):
-    
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
 
@@ -55,7 +54,6 @@ def push_to_server(username,name,content):
 
 
 def fetch_from_server(username,name):
-
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
     filename = name+".txt"
@@ -65,7 +63,6 @@ def fetch_from_server(username,name):
         return lines[0]
 
 def remove_from_server(username,name):
-
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
     filename = name+".txt"
@@ -73,7 +70,6 @@ def remove_from_server(username,name):
     os.remove(file_path)
 
 def remove_user(username):
-
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
     os.rmdir(user_path)
