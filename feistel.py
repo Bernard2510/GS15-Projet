@@ -35,8 +35,7 @@ def circularPermutation_rigth(K): #permutation 2 bits
     return circlarString
 
 def func_feistel(K,D):
-    #res = int(K,base=2)+int(D,base=2) % pow(2,256)
-    res = (int(K,base=2)+int(D,base=2)) % pow(2,512)
+    res = (int(K,base=2)+int(D,base=2)) % pow(2,256)
     return res
 
 
@@ -57,7 +56,6 @@ def feistel_encrypt(data,Key):
         D1Dec=int(G0,base=2)^func_feistel(K0,D0)
         #D1="{0:b}".format(int(D1Dec))
         D1=bin(D1Dec)[2:].zfill(len(G0))
-        print(len(D1))
 
         #while len(D1)!=len(data)/2:
             #D1="0"+D1
@@ -85,7 +83,6 @@ def feistel_decrypt(data,Key):
         #G0="{0:b}".format(int(G0Dec))
         G0=bin(G0Dec)[2:].zfill(len(D1))
         D0=G1
-        print(len(G0))
         
         #while len(G0)!=len(data)/2:
             #G0="0"+G0
@@ -107,30 +104,21 @@ def pad(msg):
 
 
 #feistel(file_to_binary("C:\\Users\\roman\\OneDrive\\Documents\\GitHub\\GS15-Projet\\server\\test\\test.txt"))
-e = "11001000110100"
-f = "0011001000110100"
-g = "0100011101010011"
-print(int(e,2))
-print(int(f,2))
-y = int(g,2)^int(e,2)
-print(bin(y)[2:].zfill(len(g)))
-print("{0:b}".format(int(y)))
+
 key = "AC3306BDFBD7585971FABD3ACBB4A71AA1C738C5D0D09CDBD95C92B58CCA6A45"
-key2 = "4DC6A57A25633299E3A177FAED0EE3FB07A09B2FDCE6F64CA92C0C3879706B8E"
+key2 = "4DC6A57A25633299E3A177FAED0EE3FB07A09B2FDCE6F64CA92C0C3879706B8E" #non
 key3 = "FF209D105008F6645FE9E54F37499D6CC33BF2E2281F2B612D1BC0B9D2F8842B"
-k=key_to_binary(key3)
-print(k)
-print(len(k))
+key4 = "1F9B454FEE1D1FF2A7A535DF5ED149416549932A5348ACE8B837AAFAB137FB5F"
+key5 = "2B6D3DB9DEDE1BDF81525212ABA0847A6B85BE8E2B412C768E52DE308CA4BCB4"
+k=key_to_binary(key)
+
 a=file_to_binary("C:\\Users\\roman\\OneDrive\\Documents\\GitHub\\GS15-Projet\\server\\alice\\Message.txt")
 
-
 msg=(pad(a))
-print(len(msg))
 enc=feistel_encrypt(msg,k)
-print(msg)
-print("-------")
+hex_enc=hex(int(enc, 2))
+print(hex_enc[2:])
 dec=feistel_decrypt(enc,k)
-print(dec)
 binary_to_ascii(dec)
 
 
