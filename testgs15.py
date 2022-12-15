@@ -220,7 +220,8 @@ def signDSA(p,q): #Revoir hashmac et génération nombre générateur
 
     while (s1==0 & s2==0):
         s = randrange(2,q-1)
-        s1 = pow(g,s,p)%q
+        s3 = pow(g,s,p)
+        s1 = s3%q
         s2 = (hash%q+s1*x)*pow(s,-1,q)%q
 
     print("s :",s)
@@ -254,7 +255,7 @@ def verifDSA(s1,s2,p,q,g,y,hash):
 
     return True
 
-#signDSA(0,"123456")
+signDSA(0,0)
 
 
 #Message Key = HMAC-SHA256(Chain Key, 0x01).
