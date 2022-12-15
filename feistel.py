@@ -1,11 +1,43 @@
 from math import ceil
+import os
 
 def file_to_binary(filename_path):
     with open(filename_path, mode='r') as file:
         data=file.read()
         return data
-        bin_data=''.join(format(ord(x), '08b') for x in data)
-        return bin_data
+
+def fetch_from_server(username,name):
+    server_path=os.getcwd()+"\server"
+    user_path=os.path.join(server_path,username)
+    filename = name+".txt"
+    file_path=os.path.join(user_path,filename)
+    with open(file_path, mode='r') as file:
+        lines = file.readlines()
+        return lines[0]
+
+def bits_to_hex(bits):
+    return hex(int(bits, 2))
+
+def hex_to_bits(hex):
+    return bin(int(hex, 16))
+
+def push_to_server(username,name,content):
+    server_path=os.getcwd()+"\server"
+    user_path=os.path.join(server_path,username)
+    #if server doesnt exist
+    try:
+        os.mkdir(server_path)
+    except OSError:
+        pass
+    #if user folder doesnt exist
+    try:
+        os.mkdir(user_path)
+    except OSError:
+        pass
+    filename = name+".txt"
+    file_path=os.path.join(user_path,filename)
+    with open(file_path,mode='w') as file:
+        file.write(str(content))
 
 def key_to_binary(key):
     bin_key=''.join(format(ord(x), '08b') for x in key)
@@ -137,7 +169,9 @@ key2 = "4DC6A57A25633299E3A177FAED0EE3FB07A09B2FDCE6F64CA92C0C3879706B8E"
 key3 = "FF209D105008F6645FE9E54F37499D6CC33BF2E2281F2B612D1BC0B9D2F8842B"
 key4 = "1F9B454FEE1D1FF2A7A535DF5ED149416549932A5348ACE8B837AAFAB137FB5F"
 key5 = "2B6D3DB9DEDE1BDF81525212ABA0847A6B85BE8E2B412C768E52DE308CA4BCB4"
-k=key_to_binary(key2)
+k=key_to_binary(key4)
+print(k)
+print("----------")
 a=file_to_binary("C:\\Users\\roman\\OneDrive\\Documents\\GitHub\\GS15-Projet\\server\\alice\\Message.txt")
 a2=string_to_bits(a)
 
@@ -149,9 +183,20 @@ tab_enc=[""]*len(tab)
 for i in range(len(tab)):
     tab_enc[i]=feistel_encrypt(tab[i],sub_key)
 
+e=""
+for i in range(len(tab)):
+    e=e+tab_enc[i]
+push_to_server("alice","enc_file",bits_to_hex(''.join(e))[2:])
+
+enc_msg=fetch_from_server("alice","enc_file")
+print(enc_msg)
+encbin=split_to_blocks(hex_to_bits(enc_msg),BLOCK_SIZE)
+print(encbin)
+print(tab_enc)
+
 tab_dec=[""]*len(tab)
-for i in range(len(tab_enc)):
-    tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key)
+for i in range(len(encbin)):
+    tab_dec[i]=feistel_decrypt(encbin[i],sub_key)
 
 
 
