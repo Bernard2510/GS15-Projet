@@ -188,7 +188,7 @@ def genkeyDSA(L,N): #a revoir algo trop long à process
     return p,q,g,y,x
     #p,q,g,y = clé publique et x = clé privé, h est le hache du message
 
-def signDSA(p,q,g,x,M): #Revoir hashmac et génération nombre générateur
+def signDSA(p,q): #Revoir hashmac et génération nombre générateur
 
     #Etape génération de clés (test on peut enlever ça plus tard)
 
@@ -220,7 +220,7 @@ def signDSA(p,q,g,x,M): #Revoir hashmac et génération nombre générateur
 
     while (s1==0 & s2==0):
         s = randrange(2,q-1)
-        s1 = (pow(g,s)%p)%q
+        s1 = pow(g,s,p)%q
         s2 = (hash%q+s1*x)*pow(s,-1,q)%q
 
     print("s :",s)
