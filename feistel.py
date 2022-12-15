@@ -56,10 +56,13 @@ def func_feistel(K,D):
     res = (int(K,base=2)+int(D,base=2)) % pow(2,16)
     return res
 
+def func_feistel2(K,D):
+    return int(K,base=2)^int(D,base=2)
+
 
 def feistel_encrypt(data,Key):
     #K0="0000000011111111"
-    K0=Key
+    #K0=Key
 
     #if len(data)%2!=0: #pas utile normalement
         #data="0"+data
@@ -68,10 +71,10 @@ def feistel_encrypt(data,Key):
     G0=data[:int(len(data)/2)]
     D0=data[int(len(data)/2):]
 
-    T=3
+    T=8
     for i in range(T):
         G1=D0
-        D1Dec=int(G0,base=2)^func_feistel(K0,D0)
+        D1Dec=int(G0,base=2)^func_feistel2(Key[i],D0)
         #D1="{0:b}".format(int(D1Dec))
         D1=bin(D1Dec)[2:].zfill(len(G0))
 
@@ -80,7 +83,7 @@ def feistel_encrypt(data,Key):
         
         G0=G1
         D0=D1
-        K0=circularPermutation_left(K0)
+        #K0=circularPermutation_left(K0)
 
         
     return G1+""+D1
@@ -88,18 +91,18 @@ def feistel_encrypt(data,Key):
     
 
 def feistel_decrypt(data,Key):
-    K0=Key
+    #K0=Key
     #K0="0000000011111111"
-    K1=circularPermutation_left(circularPermutation_left(K0))
+    #K1=circularPermutation_left(circularPermutation_left(K0))
     #print(K1)
     #K1 = "0000111111110000"
 
     G1=data[:int(len(data)/2)]
     D1=data[int(len(data)/2):]
 
-    T=3
+    T=8
     for i in range(T):
-        G0Dec=int(D1,base=2)^func_feistel(K1,G1)
+        G0Dec=int(D1,base=2)^func_feistel2(Key[7-i],G1)
         #G0="{0:b}".format(int(G0Dec))
         G0=bin(G0Dec)[2:].zfill(len(D1))
         D0=G1
@@ -109,8 +112,9 @@ def feistel_decrypt(data,Key):
         
         G1=G0
         D1=D0
-        K1=circularPermutation_rigth(K1)
-        
+        #K1=circularPermutation_rigth(K1)
+    
+    print(len(G0+""+D0))
     return G0+""+D0
 
 def pad(msg,block_size):
@@ -129,11 +133,11 @@ BLOCK_SIZE = 64
 ROUNDS = 8
 
 key = "AC3306BDFBD7585971FABD3ACBB4A71AA1C738C5D0D09CDBD95C92B58CCA6A45"
-key2 = "4DC6A57A25633299E3A177FAED0EE3FB07A09B2FDCE6F64CA92C0C3879706B8E" #non
+key2 = "4DC6A57A25633299E3A177FAED0EE3FB07A09B2FDCE6F64CA92C0C3879706B8E"
 key3 = "FF209D105008F6645FE9E54F37499D6CC33BF2E2281F2B612D1BC0B9D2F8842B"
 key4 = "1F9B454FEE1D1FF2A7A535DF5ED149416549932A5348ACE8B837AAFAB137FB5F"
 key5 = "2B6D3DB9DEDE1BDF81525212ABA0847A6B85BE8E2B412C768E52DE308CA4BCB4"
-k=key_to_binary(key4)
+k=key_to_binary(key2)
 a=file_to_binary("C:\\Users\\roman\\OneDrive\\Documents\\GitHub\\GS15-Projet\\server\\alice\\Message.txt")
 a2=string_to_bits(a)
 
@@ -143,11 +147,11 @@ sub_key=split_to_blocks(k[0:256],int(BLOCK_SIZE/2))
 
 tab_enc=[""]*len(tab)
 for i in range(len(tab)):
-    tab_enc[i]=feistel_encrypt(tab[i],sub_key[i])
+    tab_enc[i]=feistel_encrypt(tab[i],sub_key)
 
 tab_dec=[""]*len(tab)
 for i in range(len(tab_enc)):
-    tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key[i])
+    tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key)
 
 
 
@@ -156,29 +160,22 @@ for i in range(len(tab_enc)):
 t=""
 e=""
 d=""
+
 for i in range(len(tab)):
     t=t+tab[i]
     e=e+tab_enc[i]
     d=d+tab_dec[i]
 
+print(d)
+print(t)
+if d==t:
+    print("ok")
 print(bits_to_string(split_to_blocks(''.join(t), 8)))
 print(bits_to_string(split_to_blocks(''.join(e), 8)))
 print(bits_to_string(split_to_blocks(''.join(d), 8)))
 
 
 
-#print(d)
-
-"""
-msg=(pad(a))
-enc=feistel_encrypt(msg,k)
-hex_enc=hex(int(enc, 2))
-print(hex_enc[2:])
-dec=feistel_decrypt(enc,k)
-binary_to_ascii(dec)
-
-
-"""
 
 
 
