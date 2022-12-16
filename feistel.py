@@ -1,10 +1,12 @@
 from math import ceil
 import os
 
+"""
 def file_to_binary(filename_path):
     with open(filename_path, mode='r') as file:
         data=file.read()
         return data
+"""
 
 def fetch_from_server(username,name):
     server_path=os.getcwd()+"\server"
@@ -19,7 +21,9 @@ def bits_to_hex(bits):
     return hex(int(bits, 2))
 
 def hex_to_bits(hex):
-    return bin(int(hex, 16))
+    a=bin(int(hex, 16))
+    return a[2:].zfill(len(a)-1)
+    return bin(int(hex, 16))[2:]
 
 def push_to_server(username,name,content):
     server_path=os.getcwd()+"\server"
@@ -43,13 +47,6 @@ def key_to_binary(key):
     bin_key=''.join(format(ord(x), '08b') for x in key)
     return bin_key
 
-#https://www.geeksforgeeks.org/python-program-to-convert-binary-to-ascii/
-def binary_to_ascii(bin):
-    binary_int = int(bin, 2)
-    byte_number = binary_int.bit_length() + 7 // 8
-    binary_array = binary_int.to_bytes(byte_number, "big")
-    ascii_text = binary_array.decode()
-    print(ascii_text)
 
 def bits_to_string(bytes):
     return ''.join([chr(int(x, 2)) for x in bytes])
@@ -59,15 +56,13 @@ def string_to_bits(string):
     return str.ljust(BLOCK_SIZE * ceil(len(str)/BLOCK_SIZE), '0')
 
 def split_to_blocks(msg, block_size):
-    #0:64
-    #64:128
-    #128:168
     nb_block = ceil(len(msg)/block_size)
     res=[""]*nb_block
     for i in range(nb_block):
         res[i]=msg[i*block_size:(i+1)*block_size]
     return res
 
+"""
 def circularPermutation_left(K): #permutation 2 bits
     circlarString = ""
     for i in range(len(K)-2):
@@ -83,10 +78,13 @@ def circularPermutation_rigth(K): #permutation 2 bits
     for i in range(len(K)-2):
         circlarString=circlarString+""+K[i]
     return circlarString
+"""
 
+"""
 def func_feistel(K,D):
     res = (int(K,base=2)+int(D,base=2)) % pow(2,16)
     return res
+"""
 
 def func_feistel2(K,D):
     return int(K,base=2)^int(D,base=2)
@@ -146,13 +144,11 @@ def feistel_decrypt(data,Key):
         D1=D0
         #K1=circularPermutation_rigth(K1)
     
-    print(len(G0+""+D0))
     return G0+""+D0
 
 def pad(msg,block_size):
     # pkcs7 padding
     padding=block_size-len(msg)%block_size
-    print(padding)
     for i in range(padding):
         msg=msg+"0"
     return msg
@@ -170,53 +166,49 @@ key3 = "FF209D105008F6645FE9E54F37499D6CC33BF2E2281F2B612D1BC0B9D2F8842B"
 key4 = "1F9B454FEE1D1FF2A7A535DF5ED149416549932A5348ACE8B837AAFAB137FB5F"
 key5 = "2B6D3DB9DEDE1BDF81525212ABA0847A6B85BE8E2B412C768E52DE308CA4BCB4"
 k=key_to_binary(key4)
-print(k)
-print("----------")
-a=file_to_binary("C:\\Users\\roman\\OneDrive\\Documents\\GitHub\\GS15-Projet\\server\\alice\\Message.txt")
-a2=string_to_bits(a)
+msg=fetch_from_server("alice","Message")
+msg_bin=string_to_bits(msg)
 
-tab=split_to_blocks(a2,BLOCK_SIZE)
-
+msg_bin_tab=split_to_blocks(msg_bin,BLOCK_SIZE)
 sub_key=split_to_blocks(k[0:256],int(BLOCK_SIZE/2))
 
-tab_enc=[""]*len(tab)
-for i in range(len(tab)):
-    tab_enc[i]=feistel_encrypt(tab[i],sub_key)
+tab_enc=[""]*len(msg_bin_tab)
+for i in range(len(msg_bin_tab)):
+    tab_enc[i]=feistel_encrypt(msg_bin_tab[i],sub_key)
+    print(tab_enc[i])
 
-e=""
-for i in range(len(tab)):
-    e=e+tab_enc[i]
-push_to_server("alice","enc_file",bits_to_hex(''.join(e))[2:])
-
-enc_msg=fetch_from_server("alice","enc_file")
-print(enc_msg)
-encbin=split_to_blocks(hex_to_bits(enc_msg),BLOCK_SIZE)
-print(encbin)
 print(tab_enc)
 
-tab_dec=[""]*len(tab)
-for i in range(len(encbin)):
-    tab_dec[i]=feistel_decrypt(encbin[i],sub_key)
+enc_string=""
+for i in range(len(tab_enc)):
+    enc_string=enc_string+tab_enc[i]
+push_to_server("alice","enc_file",bits_to_hex(''.join(enc_string))[2:])
+
+enc_msg=fetch_from_server("alice","enc_file")
+tab_enc=split_to_blocks(hex_to_bits(enc_msg),BLOCK_SIZE)
+print(tab_enc)
 
 
-
+tab_dec=[""]*len(tab_enc)
+for i in range(len(tab_enc)):
+    tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key)
 
 
 t=""
 e=""
 d=""
 
-for i in range(len(tab)):
-    t=t+tab[i]
+for i in range(len(msg_bin_tab)):
+    t=t+msg_bin_tab[i]
     e=e+tab_enc[i]
     d=d+tab_dec[i]
 
-print(d)
-print(t)
+#print(d)
+#print(t)
 if d==t:
     print("ok")
 print(bits_to_string(split_to_blocks(''.join(t), 8)))
-print(bits_to_string(split_to_blocks(''.join(e), 8)))
+#print(bits_to_string(split_to_blocks(''.join(e), 8)))
 print(bits_to_string(split_to_blocks(''.join(d), 8)))
 
 
