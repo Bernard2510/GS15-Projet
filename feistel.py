@@ -1,12 +1,6 @@
 from math import ceil
 import os
 
-"""
-def file_to_binary(filename_path):
-    with open(filename_path, mode='r') as file:
-        data=file.read()
-        return data
-"""
 
 def fetch_from_server(username,name):
     server_path=os.getcwd()+"\server"
@@ -17,13 +11,13 @@ def fetch_from_server(username,name):
         lines = file.readlines()
         return lines[0]
 
-def bits_to_hex(bits):
+def binary_to_hexa(bits):
     return hex(int(bits, 2))
 
-def hex_to_bits(hex):
-    a=bin(int(hex, 16))
-    return a[2:].zfill(len(a)-1)
-    return bin(int(hex, 16))[2:]
+def hexa_to_binary(hex):
+    hex=bin(int(hex, 16))[2:]
+    pad=ceil(len(hex)/BLOCK_SIZE)*BLOCK_SIZE
+    return hex.zfill(pad)
 
 def push_to_server(username,name,content):
     server_path=os.getcwd()+"\server"
@@ -48,10 +42,10 @@ def key_to_binary(key):
     return bin_key
 
 
-def bits_to_string(bytes):
-    return ''.join([chr(int(x, 2)) for x in bytes])
+def binary_to_string(bits):
+    return ''.join([chr(int(x, 2)) for x in bits])
 
-def string_to_bits(string):
+def string_to_binary(string):
     str = ''.join('{:08b}'.format(ord(c)) for c in string)
     return str.ljust(BLOCK_SIZE * ceil(len(str)/BLOCK_SIZE), '0')
 
@@ -62,101 +56,49 @@ def split_to_blocks(msg, block_size):
         res[i]=msg[i*block_size:(i+1)*block_size]
     return res
 
-"""
-def circularPermutation_left(K): #permutation 2 bits
-    circlarString = ""
-    for i in range(len(K)-2):
-        circlarString=circlarString+""+K[i+2]
-    circlarString=circlarString+""+K[0]
-    circlarString=circlarString+""+K[1]
-    return circlarString
 
-def circularPermutation_rigth(K): #permutation 2 bits
-    circlarString = ""
-    circlarString=circlarString+""+K[len(K)-1]
-    circlarString=circlarString+""+K[len(K)-2]
-    for i in range(len(K)-2):
-        circlarString=circlarString+""+K[i]
-    return circlarString
-"""
 
-"""
-def func_feistel(K,D):
-    res = (int(K,base=2)+int(D,base=2)) % pow(2,16)
-    return res
-"""
-
-def func_feistel2(K,D):
+def xor(K,D):
     return int(K,base=2)^int(D,base=2)
 
 
-def feistel_encrypt(data,Key):
-    #K0="0000000011111111"
-    #K0=Key
-
-    #if len(data)%2!=0: #pas utile normalement
-        #data="0"+data
-
-
+def feistel_encrypt(data,key):
     G0=data[:int(len(data)/2)]
     D0=data[int(len(data)/2):]
 
     T=8
     for i in range(T):
         G1=D0
-        D1Dec=int(G0,base=2)^func_feistel2(Key[i],D0)
-        #D1="{0:b}".format(int(D1Dec))
+        D1Dec=int(G0,base=2)^xor(key[i],D0)
         D1=bin(D1Dec)[2:].zfill(len(G0))
 
-        #while len(D1)!=len(data)/2:
-            #D1="0"+D1
-        
         G0=G1
         D0=D1
-        #K0=circularPermutation_left(K0)
 
         
     return G1+""+D1
     
     
 
-def feistel_decrypt(data,Key):
-    #K0=Key
-    #K0="0000000011111111"
-    #K1=circularPermutation_left(circularPermutation_left(K0))
-    #print(K1)
-    #K1 = "0000111111110000"
-
+def feistel_decrypt(data,key):
     G1=data[:int(len(data)/2)]
     D1=data[int(len(data)/2):]
 
     T=8
     for i in range(T):
-        G0Dec=int(D1,base=2)^func_feistel2(Key[7-i],G1)
-        #G0="{0:b}".format(int(G0Dec))
+        G0Dec=int(D1,base=2)^xor(key[7-i],G1)
         G0=bin(G0Dec)[2:].zfill(len(D1))
         D0=G1
         
-        #while len(G0)!=len(data)/2:
-            #G0="0"+G0
-        
         G1=G0
         D1=D0
-        #K1=circularPermutation_rigth(K1)
     
     return G0+""+D0
 
-def pad(msg,block_size):
-    # pkcs7 padding
-    padding=block_size-len(msg)%block_size
-    for i in range(padding):
-        msg=msg+"0"
-    return msg
 
 
 
 
-#feistel(file_to_binary("C:\\Users\\roman\\OneDrive\\Documents\\GitHub\\GS15-Projet\\server\\test\\test.txt"))
 BLOCK_SIZE = 64
 ROUNDS = 8
 
@@ -165,51 +107,69 @@ key2 = "4DC6A57A25633299E3A177FAED0EE3FB07A09B2FDCE6F64CA92C0C3879706B8E"
 key3 = "FF209D105008F6645FE9E54F37499D6CC33BF2E2281F2B612D1BC0B9D2F8842B"
 key4 = "1F9B454FEE1D1FF2A7A535DF5ED149416549932A5348ACE8B837AAFAB137FB5F"
 key5 = "2B6D3DB9DEDE1BDF81525212ABA0847A6B85BE8E2B412C768E52DE308CA4BCB4"
-k=key_to_binary(key2)
+
+#choix de la clé
+k=key_to_binary(key5)
+#k=512 bits
+#0-256 : key
+#256-320 : iV
+
+#récupère le message (fichier) à chiffrer
 msg=fetch_from_server("alice","Message")
-msg_bin=string_to_bits(msg)
+#convertion du message en binaire
+msg_bin=string_to_binary(msg)
 
+#IV
+iv_init=k[BLOCK_SIZE*ROUNDS//2:BLOCK_SIZE*(ROUNDS//2+1)]
+iv=iv_init
+#div en bloc du message
 msg_bin_tab=split_to_blocks(msg_bin,BLOCK_SIZE)
-sub_key=split_to_blocks(k[0:256],int(BLOCK_SIZE/2))
-
+#div en bloc de la clé
+sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
+#tournés de feistel sur les blocs du message mode CBC
 tab_enc=[""]*len(msg_bin_tab)
 for i in range(len(msg_bin_tab)):
+    msg_bin_tab[i]=xor(iv,msg_bin_tab[i])
+    msg_bin_tab[i]=bin(msg_bin_tab[i])[2:].zfill(BLOCK_SIZE)
     tab_enc[i]=feistel_encrypt(msg_bin_tab[i],sub_key)
-    print(tab_enc[i])
+    iv=tab_enc[i]
 
-print(tab_enc)
 
+#envoi du chiffré
 enc_string=""
 for i in range(len(tab_enc)):
     enc_string=enc_string+tab_enc[i]
-push_to_server("alice","enc_file",bits_to_hex(''.join(enc_string))[2:])
+push_to_server("alice","enc_file",binary_to_hexa(''.join(enc_string))[2:])
 
+
+#recup du chiffré
 enc_msg=fetch_from_server("alice","enc_file")
-tab_enc=split_to_blocks(hex_to_bits(enc_msg),BLOCK_SIZE)
-print(tab_enc)
+tab_enc=split_to_blocks(hexa_to_binary(enc_msg),BLOCK_SIZE)
 
-
+#tournés de feistel sur les blocs du chiffré
+#mode CBC
+iv=iv_init
 tab_dec=[""]*len(tab_enc)
 for i in range(len(tab_enc)):
     tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key)
+    tab_dec[i]=xor(iv,tab_dec[i])
+    tab_dec[i]=bin(tab_dec[i])[2:].zfill(BLOCK_SIZE)
+    iv=tab_enc[i]
 
 
-t=""
 e=""
 d=""
 
 for i in range(len(msg_bin_tab)):
-    t=t+msg_bin_tab[i]
     e=e+tab_enc[i]
     d=d+tab_dec[i]
 
-#print(d)
-#print(t)
-if d==t:
-    print("ok")
-print(bits_to_string(split_to_blocks(''.join(t), 8)))
-#print(bits_to_string(split_to_blocks(''.join(e), 8)))
-print(bits_to_string(split_to_blocks(''.join(d), 8)))
+#message clair
+print(msg)
+#message chiffré hexa
+print(binary_to_hexa(''.join(enc_string))[2:])
+#message déchiffré
+print(binary_to_string(split_to_blocks(''.join(d), 8)))
 
 
 
