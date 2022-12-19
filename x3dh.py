@@ -266,48 +266,37 @@ init_ratchets(alice,1)
 init_ratchets(bob,2)
 
 
+def sendKey(sender,receiverName):
+    sender.RPrivKey, sender.RPubKey = gen_key_pair()
+    push_to_server(sender.name,"RPubKey",sender.RPubKey)
+    receiverPubKey=fetch_from_server(receiverName,"RPubKey")
+    RDH=DH(sender.RPrivKey,receiverPubKey)
+    sender.sendRatchet.chainKey=turn_ratchet_DH(sender.rootRatchet,RDH)
+    messageKey=turn_ratchet(sender.sendRatchet)
+    return messageKey
+
+
+def receiveKey(receiver,senderName):
+    senderPubKey=fetch_from_server(senderName,"RPubKey")
+    RDH=DH(receiver.RPrivKey,senderPubKey)
+    #decode message
+    receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
+    messageKey=turn_ratchet(receiver.recvRatchet)
+    receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
+    push_to_server(receiver.name,"RPubKey",receiver.RPubKey)
+    return messageKey
 
 def sendMessage(sender,receiverName,message):
-    sender.RPrivKey, sender.RPubKey = gen_key_pair()
-    push_to_server(sender.name,"RPubKey",sender.RPubKey)
-    receiverPubKey=fetch_from_server(receiverName,"RPubKey")
-    RDH=DH(sender.RPrivKey,receiverPubKey)
-    push_to_server(sender.name,"Message",message)
-    sender.sendRatchet.chainKey=turn_ratchet_DH(sender.rootRatchet,RDH)
-    messageKey=turn_ratchet(sender.sendRatchet)
-    return message+messageKey
+    #recup clé d'envoi
+    k=key_to_binary(sendKey(sender,receiverName))
+    #encoder message
+    
 
-
-def receiveMessage(receiver,senderName):
-    message=fetch_from_server(senderName,"Message")
-    senderPubKey=fetch_from_server(senderName,"RPubKey")
-    RDH=DH(receiver.RPrivKey,senderPubKey)
-    #decode message
-    receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
-    messageKey=turn_ratchet(receiver.recvRatchet)
-    receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
-    push_to_server(receiver.name,"RPubKey",receiver.RPubKey)
-    return message, messageKey
-
-def sendMessageKey(sender,receiverName):
-    sender.RPrivKey, sender.RPubKey = gen_key_pair()
-    push_to_server(sender.name,"RPubKey",sender.RPubKey)
-    receiverPubKey=fetch_from_server(receiverName,"RPubKey")
-    RDH=DH(sender.RPrivKey,receiverPubKey)
-    sender.sendRatchet.chainKey=turn_ratchet_DH(sender.rootRatchet,RDH)
-    messageKey=turn_ratchet(sender.sendRatchet)
-    return messageKey
-
-
-def receiveMessageKey(receiver,senderName):
-    senderPubKey=fetch_from_server(senderName,"RPubKey")
-    RDH=DH(receiver.RPrivKey,senderPubKey)
-    #decode message
-    receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
-    messageKey=turn_ratchet(receiver.recvRatchet)
-    receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
-    push_to_server(receiver.name,"RPubKey",receiver.RPubKey)
-    return messageKey
+def receiveMessage(receiver,senderName,enc_msg):
+    #recup clé de reception
+    k=key_to_binary(receiveKey(receiver,senderName))
+    #decoder enc_msg
+    
 
 
 def sendFile(sender,receiverName,fileName):
@@ -315,7 +304,7 @@ def sendFile(sender,receiverName,fileName):
     ROUNDS = 8
 
     #recup clé d'envoi
-    k=key_to_binary(sendMessageKey(sender,receiverName))
+    k=key_to_binary(sendKey(sender,receiverName))
     #k=512 bits
     #0-256 : key
     #256-320 : iV
@@ -353,7 +342,7 @@ def ReceiveFile(receiver,senderName,fileName):
     ROUNDS = 8
 
     #recup clé de reception
-    k=key_to_binary(receiveMessageKey(receiver,senderName))
+    k=key_to_binary(receiveKey(receiver,senderName))
     sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
     #recup du chiffré
     enc_msg=fetch_from_server(senderName,"enc_file")
@@ -373,17 +362,12 @@ def ReceiveFile(receiver,senderName,fileName):
         iv=tab_enc[i]
         dec_string=dec_string+tab_dec[i]
 
-    push_to_server(receiver.name,"Receive_Message",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
+    push_to_server(receiver.name,"receiveFile",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
     
 
-sendFile(alice,bob.name,"Send_Message")
-ReceiveFile(bob,alice.name,"test")
-"""
-print(sendMessage(bob,alice.name,"hello"))
-print(receiveMessage(alice,bob.name))
-print(sendMessage(alice,bob.name,"bonjour"))
-print(receiveMessage(bob,alice.name))
-"""
+#sendFile(alice,bob.name,"sendFile")
+#ReceiveFile(bob,alice.name,"test")
+
 
 
 
