@@ -14,9 +14,9 @@ def fetch_from_server(username,name):
 def binary_to_hexa(bits):
     return hex(int(bits, 2))
 
-def hexa_to_binary(hex):
+def hexa_to_binary(hex,block_size):
     hex=bin(int(hex, 16))[2:]
-    pad=ceil(len(hex)/BLOCK_SIZE)*BLOCK_SIZE
+    pad=ceil(len(hex)/block_size)*block_size
     return hex.zfill(pad)
 
 def push_to_server(username,name,content):
@@ -45,9 +45,9 @@ def key_to_binary(key):
 def binary_to_string(bits):
     return ''.join([chr(int(x, 2)) for x in bits])
 
-def string_to_binary(string):
+def string_to_binary(string,block_size):
     str = ''.join('{:08b}'.format(ord(c)) for c in string)
-    return str.ljust(BLOCK_SIZE * ceil(len(str)/BLOCK_SIZE), '0')
+    return str.ljust(block_size * ceil(len(str)/block_size), '0')
 
 def split_to_blocks(msg, block_size):
     nb_block = ceil(len(msg)/block_size)
@@ -62,11 +62,10 @@ def xor(K,D):
     return int(K,base=2)^int(D,base=2)
 
 
-def feistel_encrypt(data,key):
+def feistel_encrypt(data,key,rounds):
     G0=data[:int(len(data)/2)]
     D0=data[int(len(data)/2):]
-
-    T=8
+    T=rounds
     for i in range(T):
         G1=D0
         D1Dec=int(G0,base=2)^xor(key[i],D0)
@@ -80,11 +79,10 @@ def feistel_encrypt(data,key):
     
     
 
-def feistel_decrypt(data,key):
+def feistel_decrypt(data,key,rounds):
     G1=data[:int(len(data)/2)]
     D1=data[int(len(data)/2):]
-
-    T=8
+    T=rounds
     for i in range(T):
         G0Dec=int(D1,base=2)^xor(key[7-i],G1)
         G0=bin(G0Dec)[2:].zfill(len(D1))
@@ -115,9 +113,9 @@ k=key_to_binary(key5)
 #256-320 : iV
 
 #récupère le message (fichier) à chiffrer
-msg=fetch_from_server("alice","Message")
+msg=fetch_from_server("alice","Send_Message")
 #convertion du message en binaire
-msg_bin=string_to_binary(msg)
+msg_bin=string_to_binary(msg,BLOCK_SIZE)
 
 #IV
 iv_init=k[BLOCK_SIZE*ROUNDS//2:BLOCK_SIZE*(ROUNDS//2+1)]
@@ -131,7 +129,7 @@ tab_enc=[""]*len(msg_bin_tab)
 for i in range(len(msg_bin_tab)):
     msg_bin_tab[i]=xor(iv,msg_bin_tab[i])
     msg_bin_tab[i]=bin(msg_bin_tab[i])[2:].zfill(BLOCK_SIZE)
-    tab_enc[i]=feistel_encrypt(msg_bin_tab[i],sub_key)
+    tab_enc[i]=feistel_encrypt(msg_bin_tab[i],sub_key,ROUNDS)
     iv=tab_enc[i]
 
 
@@ -144,19 +142,21 @@ push_to_server("alice","enc_file",binary_to_hexa(''.join(enc_string))[2:])
 
 #recup du chiffré
 enc_msg=fetch_from_server("alice","enc_file")
-tab_enc=split_to_blocks(hexa_to_binary(enc_msg),BLOCK_SIZE)
+tab_enc=split_to_blocks(hexa_to_binary(enc_msg,BLOCK_SIZE),BLOCK_SIZE)
 
 #tournés de feistel sur les blocs du chiffré
 #mode CBC
+dec_string=""
 iv=iv_init
 tab_dec=[""]*len(tab_enc)
 for i in range(len(tab_enc)):
-    tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key)
+    tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key,ROUNDS)
     tab_dec[i]=xor(iv,tab_dec[i])
     tab_dec[i]=bin(tab_dec[i])[2:].zfill(BLOCK_SIZE)
     iv=tab_enc[i]
+    dec_string=dec_string+tab_dec[i]
 
-
+push_to_server("bob","Receive_Message",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
 e=""
 d=""
 
