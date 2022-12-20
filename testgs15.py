@@ -47,31 +47,6 @@ def hmac_sha256(chainkey,data):
     #retour cle chaine pour la prochaine iteration du hmac
     return hash_sum_2
 
-
-#hmac_sha256(1,1)
-# a = 123456789
-# print(a)
-# m = hashlib.sha256(str(a).encode('ASCII')).hexdigest()
-# print(m)
-
-
-# def signRSA(priv_key,M):
-
-#     p=random_prime() #ou fixe ?
-#     q=random_prime()
-#     n=p*q
-
-#     while (n%priv_key==0): #ou verifer premier entre eux
-#         p=random_prime()
-#         q=random_prime()
-#         n=p*q
-
-#     S=M**priv_key % n
-#     return S
-
-# def initRSAkey():
-#     return 
-
 def quotient(a,b):
     return a // b
 
@@ -163,81 +138,123 @@ def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
    
     return prime
 
-def genkeyDSA(L=2048,N=256):
-    L=2048
-    N=256
-    #p = gensafeprime() #2048
-    #k=2
-    #q=p//2
+def gen_safeprime(): #Génère un nombre fortement premier
     
-    p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759 #2048  #à générer avec l'algorithme au dessus
-    print(rabin_miller(p,25))
-    print(p.bit_length())
-    q = (p-1)//2 #256   #à générer avec l'algorithme au dessus
+    while True:
+        p = gen_prime(2048)
+        if gmpy2.is_prime((p-1)//2)==True:
+            print("p : ",p)
+            print(p.bit_length())
+            return p
+
+
+def gen_elementgen(p): #Génère un élement générateur avec pour paramètre un nombre fortement premier
+    q=(p-1)//2
+    while True:
+        alpha = secrets.randbits(512)
+        if pow(alpha,2,p)!=1 & pow(alpha,q,p)!=1 & pow(alpha,p-1,p)==1:
+            print("alpha:",alpha)
+            print("alpha^2:",pow(alpha,2,p))
+            print("alpha^q:",pow(alpha,(p-1)//2,p))
+            print("alpha^p-1:",pow(alpha,p-1,p))
+            return alpha
+
+
+def gen_IDKey(): #Permet de générer les clés identités d'un utilisateur
+
+    print("Génération des clés identités :")
+    choix = ""
+    
+    while True:
+        choix = input("Ecrivez (1) pour laisser les clés par défaut pour démonstration, écrivez (2) pour générer de nouvelles clés identités.\n")
+        if choix =="1":
+            print("Vous avez choisi les paramètres par défaut.")
+            p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759 #2048  #à générer avec l'algorithme au dessus
+            g = gen_elementgen(p) 
+            IDpriv = secrets.randbits(2048)
+            IDpub =pow(g,IDpriv,p)
+            return IDpriv, IDpub
+        if choix =="2":
+            print("Vous avez choisi de générer un nouveau couple de clés.")
+            p = gen_safeprime()
+            g = gen_elementgen(p)
+            IDpriv = secrets.randbits(2048)
+            IDpub =pow(g,IDpriv,p)
+            return IDpriv, IDpub
+
+
+
+def genkeyDSA(IDpriv): #On génère p, q, k tel que p-1=k*q avec p et q premier cependant pour faciliter les calculs on a pris k=2 et on se retrouve sur un problème d'existence d'un élément fortement premier
+
+    x=IDpriv
+    print("Génération des clés identités :")
+    choix = ""
+    
+    while True:
+        choix = input("Ecrivez (1) pour laisser les clés par défaut pour démonstration, écrivez (2) pour générer de nouvelles clés.\n")
+        if choix=="1":
+            print("Vous avez choisi les paramètres par défaut.")
+            p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759
+            break
+        if choix=="2":
+            print("Vous avez choisi de générer une nouvelle clé.")
+            p = gen_safeprime()
+            break
+
+    print("p: ",p)
+    q = (p-1)//2 
     print(rabin_miller(q,25))
     k = 2
     if(p-1==k*q):
         print("good")
-
-
-
 
     h = randrange(1,p-1)
     g = pow(h,k,p)
     while g<1:
             h = randrange(1,p-1)
             print(h)
-    x = randrange(0,q)
     y = pow(g,x,p)
-
-    return p,q,g,y,x
-    #p,q,g,y = clé publique et x = clé privé, h est le hache du message
-
-def signDSA(p,q): #Revoir hashmac et génération nombre générateur
-
-    #Etape génération de clés (test on peut enlever ça plus tard)
-
-    p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759 #2048  #à générer avec l'algorithme au dessus
-    print(rabin_miller(p,25))
-    print(p.bit_length())
-    q = (25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759-1)//2 #256   #à générer avec l'algorithme au dessus
-    print(rabin_miller(q,25))
-    k = 2
-    if(p-1==k*q):
-        print("good")
-    h = randrange(1,p-1)
-    g = pow(h,k)%p
-    while g<1:
-            h = randrange(1,p-1)
-            print(h)
-    x = randrange(0,q) #clé privée
-    y = pow(g,x,p)
-
+    
     print("p:",p)
     print("q:",q)
-    print("qx2: ",q*2)
+    print("x:",x)
     print("g:",g)
-    print("y:",y)   #clé publique
+    print("y:",y) 
 
-    #Etape de signature
+    return p,q,g,y
+    #p,q,g,y = clé publique et x = clé privé, h est le hache du message
+
+def signDSA(p,q,g,IDpriv,M): #On signe le message avec la clé privée ID et les clés publiques DSA
+    
+    x=IDpriv
+    hash = int(hashlib.sha256(M.encode('utf-8')).hexdigest(),16)
+    print("hash :",hash)
+
     s = randrange(1,q)
     s1 = pow(g,s,p)%q
-    hash = int(hashlib.sha256(b"123456").hexdigest(),16)
-    print("hash :",hash)
-    s2 = (hash%q+s1*x)*pow(s,-1,q)%q #changer 123456 par variable
+    s2 = (hash+s1*x)*pow(s,-1,q)%q 
 
     while (s1==0 & s2==0):
-        s = randrange(2,q-1)
+        s = randrange(1,q)
         s1 = pow(g,s,p)%q
-        s2 = (hash%q+s1*x)*pow(s,-1,q)%q
+        s2 = ((hash+s1*x)*pow(s,-1,q))%q
 
     print("s :",s)
     print("s1: ",s1)
     print("s2 :",s2)
 
-    #verification signature
+    return s1,s2
+
+def verifDSA(s1,s2,p,q,g,y,M): #Permet de vérifier la signature DSA
+   
+    if (s1<0 | s1>q) & (s2<0 & s2>q):
+        print("erreur")
+        return False
+    
+    hash = int(hashlib.sha256(M.encode('utf-8')).hexdigest(),16)
+    print("hash :",hash)
+
     w = pow(s2,-1,q)
-    print(hash)
     u1 = (hash*w)%q
     u2 = (s1*w)%q
     v= (pow(g,u1,p)*pow(y,u2,p)%p)%q
@@ -248,51 +265,17 @@ def signDSA(p,q): #Revoir hashmac et génération nombre générateur
 
     if v==s1:
         print("Signature validé")
-
-    return s1,s2,hash
-
-def verifDSA(s1,s2,p,q,g,y,hash):
-   
-    if (s1<0 | s1>q) & (s2<0 & s2>q):
-        print("erreur")
+        return True
+    else:
+        print("Signature non-valide")
         return False
-    
-    w = pow(s2,-1,q)
-    u1 = (hash*w)%q
-    u2 = (s1*w)%q
-    v= (pow(g,u1)*pow(y,u2)%p)%q
-    print("v: ",v)
 
-    return True
+IDpriv, IDpub = gen_IDKey()
+p,q,g,y= genkeyDSA(IDpriv)
+M="12345"
+M2="1234"
+s1,s2 = signDSA(p,q,g,IDpriv,M)
+verifDSA(s1,s2,p,q,g,y,M)
 
-#signDSA(0,0)
-
-
-#Message Key = HMAC-SHA256(Chain Key, 0x01).
-#Chain Key = HMAC-SHA256(Chain Key, 0x02)
-# print(hmac_sha256(1,1))
-
-def gen_safeprime(): #Génère un nombre fortement premier
-    
-    while True:
-        p = gen_prime(2048)
-        print("test")
-        if gmpy2.is_prime((p-1)//2)==True:
-            print("p : ",p)
-            print(p.bit_length())
-            return p
-
-
-def gen_elementgen(p): #Génère un élement générateur avec pour paramètre un nombre fortement premier
-    p=25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759
-    q=(p-1)//2
-    while True:
-        alpha = secrets.randbits(512)
-        if pow(alpha,2,p)!=1 & pow(alpha,q,p)!=1 & pow(alpha,p-1,p)==1:
-            print("alpha:",alpha)
-            print("alpha^2:",pow(alpha,2,p))
-            print("alpha^q:",pow(alpha,(p-1)//2,p))
-            print("alpha^p-1:",pow(alpha,p-1,p))
-            return q
 
 
