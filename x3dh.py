@@ -33,6 +33,14 @@ class Bundle:
         self.otPKn = "" #liste de clés one time session
         self.n = "" #numéro one time key utilisee
 
+
+class SymmRatchet:
+
+    def __init__(self, key):
+        self.chainKey = key
+
+
+
 def push_to_server(username,name,content):
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
@@ -52,7 +60,8 @@ def push_to_server(username,name,content):
     filename = name
     file_path=os.path.join(user_path,filename)
     with open(file_path,mode='w') as file:
-        file.write(str(content))
+        file.writelines(str(content))
+        
 
 
 def fetch_from_server(username,name):
@@ -62,7 +71,11 @@ def fetch_from_server(username,name):
     file_path=os.path.join(user_path,filename)
     with open(file_path, mode='r') as file:
         lines = file.readlines()
-        return lines[0]
+        string=""
+        for l in lines:
+            string=string+str(l)
+
+        return string
 
 def remove_from_server(username,name):
     server_path=os.getcwd()+"\server"
@@ -71,17 +84,21 @@ def remove_from_server(username,name):
     file_path=os.path.join(user_path,filename)
     os.remove(file_path)
 
-def remove_user(username):
-    server_path=os.getcwd()+"\server"
-    user_path=os.path.join(server_path,username)
-    os.rmdir(user_path)
+
 
 """
 Feistel
 """
-def string_to_binary(string,block_size):
+def string_to_binary(string):
     str = ''.join('{:08b}'.format(ord(c)) for c in string)
-    return str.ljust(block_size * ceil(len(str)/block_size), '0')
+    return str
+
+def padding(bin_string,block_size):
+    return bin_string.ljust(block_size * ceil(len(bin_string)/block_size), '0')
+
+#a revoir
+def unpadding(bin_string):
+    return bin_string[:-ord(bin_string[len(bin_string)-1:])]
 
 def split_to_blocks(msg, block_size):
     nb_block = ceil(len(msg)/block_size)
@@ -89,10 +106,6 @@ def split_to_blocks(msg, block_size):
     for i in range(nb_block):
         res[i]=msg[i*block_size:(i+1)*block_size]
     return res
-
-def key_to_binary(key):
-    bin_key=''.join(format(ord(x), '08b') for x in key)
-    return bin_key
 
 def binary_to_hexa(bits):
     return hex(int(bits, 2))
@@ -159,7 +172,7 @@ def publish_bundle(user):
     push_to_server(user.name,"idPubKey.txt",user.idPubKey)
     push_to_server(user.name,"preSignPubKey.txt",user.preSignPubKey)
     for i in range(len(user.otPubKey)):
-        push_to_server(user.name,"otPubKey.txt"+str(i),user.otPubKey[i])
+        push_to_server(user.name,"otPubKey"+str(i)+".txt",user.otPubKey[i])
 
 
 def get_user_bundle(username):
@@ -167,11 +180,19 @@ def get_user_bundle(username):
     bundle.idPubKey = fetch_from_server(username,"idPubKey.txt")
     bundle.preSignPubKey = fetch_from_server(username,"preSignPubKey.txt")
     bundle.n = random.randrange(MAX_OTPK)
-    bundle.otPKn = fetch_from_server(username,"otPubKey.txt"+str(bundle.n))
+    bundle.otPKn = fetch_from_server(username,"otPubKey"+str(bundle.n)+".txt")
     return bundle
 
-def establish_session(receiver):
-    receiverBundle=get_user_bundle(receiver.name)
+def get_x3dh_info(username):
+    idPubK = fetch_from_server(username,"idPubKey.txt")
+    EphPubK = fetch_from_server(username,"EphPubKey.txt")
+    n = fetch_from_server(username,"n.txt")
+    remove_from_server(username,"EphPubKey.txt")
+    remove_from_server(username,"n.txt")
+    return idPubK, EphPubK, n
+
+def establish_session(receiverName):
+    receiverBundle=get_user_bundle(receiverName)
     EphPrivK,EphPubK = gen_key_pair()
     return receiverBundle, EphPrivK, EphPubK
 
@@ -190,37 +211,37 @@ def create_sha256_signature(key, message):
     message = message.encode()
     return hmac.new(byte_key, message, hashlib.sha256).hexdigest().upper()
 
-def x3dh_sender(sender, receiver):
-    receiverBundle, EphPrivK, EphPubK = establish_session(receiver)
+def x3dh_sender(sender, receiverName):
+    receiverBundle, EphPrivK, EphPubK = establish_session(receiverName)
     #verif signature
     DH1 = DH(sender.idPrivKey,receiverBundle.preSignPubKey)
     DH2 = DH(EphPrivK,receiverBundle.idPubKey)
     DH3 = DH(EphPrivK,receiverBundle.preSignPubKey)
     DH4 = DH(EphPrivK,receiverBundle.otPKn)
-
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
     sender.SK=SK
-    #supp DH1, 2, 3, 4 et EphPrivK, EphPubK
-    x3dh_receiver(sender.idPubKey, EphPubK, receiverBundle.n, receiver) 
+    push_to_server(sender.name,"EphPubKey.txt",EphPubK)
+    push_to_server(sender.name,"n.txt",receiverBundle.n)
+    del DH1, DH2, DH3, DH4, DHf, receiverBundle, EphPrivK, EphPubK
 
-#when online
-def x3dh_receiver(sender_idPubK, sender_EphPubK, n, receiver):
+
+def x3dh_receiver(receiver, senderName):
+    sender_idPubK, sender_EphPubK, n = get_x3dh_info(senderName)
     DH1 = DH(receiver.preSignPrivKey, sender_idPubK)
     DH2 = DH(receiver.idPrivKey, sender_EphPubK)
     DH3 = DH(receiver.preSignPrivKey, sender_EphPubK)
-    DH4 = DH(receiver.otPrivKey[n],sender_EphPubK)
+    DH4 = DH(receiver.otPrivKey[int(n)],sender_EphPubK)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
     receiver.SK=SK
-    #supp DH1, 2, 3, 4 et EphPrivK, EphPubK
+    #regenere OneTimeKey utilisee
+    receiver.otPrivKey[int(n)], receiver.otPubKey[int(n)]=gen_key_pair()
+    del DH1, DH2, DH3, DH4, DHf, sender_EphPubK, sender_idPubK, n
 
 
 
-class SymmRatchet:
 
-    def __init__(self, key):
-        self.chainKey = key
 
 
 def init_ratchets(user,order):
@@ -260,7 +281,9 @@ publish_bundle(alice)
 bob=Utilisateur("bob")
 generate_bundle(bob)
 publish_bundle(bob)
-x3dh_sender(bob,alice)
+x3dh_sender(bob,alice.name)
+
+x3dh_receiver(alice,bob.name)
 
 #MAIN INIT DOUBLE RATCHET
 init_ratchets(alice,1)
@@ -280,7 +303,6 @@ def sendKey(sender,receiverName):
 def receiveKey(receiver,senderName):
     senderPubKey=fetch_from_server(senderName,"RPubKey.txt")
     RDH=DH(receiver.RPrivKey,senderPubKey)
-    #decode message
     receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
     messageKey=turn_ratchet(receiver.recvRatchet)
     receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
@@ -289,13 +311,13 @@ def receiveKey(receiver,senderName):
 
 def sendMessage(sender,receiverName,message):
     #recup clé d'envoi
-    k=key_to_binary(sendKey(sender,receiverName))
+    k=string_to_binary(sendKey(sender,receiverName))
     #encoder message
     
 
 def receiveMessage(receiver,senderName,enc_msg):
     #recup clé de reception
-    k=key_to_binary(receiveKey(receiver,senderName))
+    k=string_to_binary(receiveKey(receiver,senderName))
     #decoder enc_msg
     
 
@@ -305,7 +327,7 @@ def sendFile(sender,receiverName,fileName):
     ROUNDS = 8
 
     #recup clé d'envoi
-    k=key_to_binary(sendKey(sender,receiverName))
+    k=string_to_binary(sendKey(sender,receiverName))
     #k=512 bits
     #0-256 : key
     #256-320 : iV
@@ -313,7 +335,9 @@ def sendFile(sender,receiverName,fileName):
     #récupère le message (fichier) à chiffrer
     msg=fetch_from_server(sender.name,fileName)
     #convertion du message en binaire
-    msg_bin=string_to_binary(msg,BLOCK_SIZE)
+    msg_bin=string_to_binary(msg)
+    msg_bin=padding(msg_bin,BLOCK_SIZE)
+
 
     #IV
     iv_init=k[BLOCK_SIZE*ROUNDS//2:BLOCK_SIZE*(ROUNDS//2+1)]
@@ -335,18 +359,19 @@ def sendFile(sender,receiverName,fileName):
     enc_string=""
     for i in range(len(tab_enc)):
         enc_string=enc_string+tab_enc[i]
-    push_to_server(sender.name,"enc_file.txt",binary_to_hexa(''.join(enc_string))[2:])
+    push_to_server(sender.name,sender.name+"_to_"+receiverName+".txt",binary_to_hexa(enc_string)[2:])
 
 
-def ReceiveFile(receiver,senderName,fileName):
+def ReceiveFile(receiver,senderName):
     BLOCK_SIZE = 64
     ROUNDS = 8
 
     #recup clé de reception
-    k=key_to_binary(receiveKey(receiver,senderName))
+    k=string_to_binary(receiveKey(receiver,senderName))
     sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
     #recup du chiffré
-    enc_msg=fetch_from_server(senderName,"enc_file.txt")
+    enc_msg=fetch_from_server(senderName,senderName+"_to_"+receiver.name+".txt")
+    remove_from_server(senderName,senderName+"_to_"+receiver.name+".txt")
     tab_enc=split_to_blocks(hexa_to_binary(enc_msg,BLOCK_SIZE),BLOCK_SIZE)
 
     #tournés de feistel sur les blocs du chiffré
@@ -362,12 +387,13 @@ def ReceiveFile(receiver,senderName,fileName):
         tab_dec[i]=bin(tab_dec[i])[2:].zfill(BLOCK_SIZE)
         iv=tab_enc[i]
         dec_string=dec_string+tab_dec[i]
+    #dec_string=unpadding(dec_string)
 
-    push_to_server(receiver.name,"receiveFile.txt",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
+    push_to_server(receiver.name,"receiveFile.txt",binary_to_string(split_to_blocks(dec_string, 8)))
     
 
-#sendFile(alice,bob.name,"sendFile")
-#ReceiveFile(bob,alice.name,"test")
+sendFile(alice,bob.name,"sendFile.txt")
+ReceiveFile(bob,alice.name)
 
 
 
