@@ -11,6 +11,7 @@ class Utilisateur:
         self.idPubKey = "" #ID clé publique
         self.preSignPubKey = "" #clé publique présignée
         self.preSignPrivKey = "" #clé privée présignée
+        self.SignSPKPub = []
         self.otPrivKey = [] #liste de clés one time session privée
         self.otPubKey = [] #liste de clés one time session privée
         self.SK = "" #clé partagé
@@ -48,7 +49,7 @@ def push_to_server(username,name,content):
     except OSError:
         pass
     
-    filename = name+".txt"
+    filename = name
     file_path=os.path.join(user_path,filename)
     with open(file_path,mode='w') as file:
         file.write(str(content))
@@ -57,7 +58,7 @@ def push_to_server(username,name,content):
 def fetch_from_server(username,name):
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
-    filename = name+".txt"
+    filename = name
     file_path=os.path.join(user_path,filename)
     with open(file_path, mode='r') as file:
         lines = file.readlines()
@@ -66,7 +67,7 @@ def fetch_from_server(username,name):
 def remove_from_server(username,name):
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
-    filename = name+".txt"
+    filename = name
     file_path=os.path.join(user_path,filename)
     os.remove(file_path)
 
@@ -155,18 +156,18 @@ def generate_bundle(user):
 
 
 def publish_bundle(user):
-    push_to_server(user.name,"idPubKey",user.idPubKey)
-    push_to_server(user.name,"preSignPubKey",user.preSignPubKey)
+    push_to_server(user.name,"idPubKey.txt",user.idPubKey)
+    push_to_server(user.name,"preSignPubKey.txt",user.preSignPubKey)
     for i in range(len(user.otPubKey)):
-        push_to_server(user.name,"otPubKey"+str(i),user.otPubKey[i])
+        push_to_server(user.name,"otPubKey.txt"+str(i),user.otPubKey[i])
 
 
 def get_user_bundle(username):
     bundle = Bundle()
-    bundle.idPubKey = fetch_from_server(username,"idPubKey")
-    bundle.preSignPubKey = fetch_from_server(username,"preSignPubKey")
+    bundle.idPubKey = fetch_from_server(username,"idPubKey.txt")
+    bundle.preSignPubKey = fetch_from_server(username,"preSignPubKey.txt")
     bundle.n = random.randrange(MAX_OTPK)
-    bundle.otPKn = fetch_from_server(username,"otPubKey"+str(bundle.n))
+    bundle.otPKn = fetch_from_server(username,"otPubKey.txt"+str(bundle.n))
     return bundle
 
 def establish_session(receiver):
@@ -234,7 +235,7 @@ def init_ratchets(user,order):
         user.sendRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
     # initialise DH key
     user.RPrivKey, user.RPubKey = gen_key_pair()
-    push_to_server(user.name,"RPubKey",user.RPubKey)
+    push_to_server(user.name,"RPubKey.txt",user.RPubKey)
 
 
 def turn_ratchet(ratchet):
@@ -268,8 +269,8 @@ init_ratchets(bob,2)
 
 def sendKey(sender,receiverName):
     sender.RPrivKey, sender.RPubKey = gen_key_pair()
-    push_to_server(sender.name,"RPubKey",sender.RPubKey)
-    receiverPubKey=fetch_from_server(receiverName,"RPubKey")
+    push_to_server(sender.name,"RPubKey.txt",sender.RPubKey)
+    receiverPubKey=fetch_from_server(receiverName,"RPubKey.txt")
     RDH=DH(sender.RPrivKey,receiverPubKey)
     sender.sendRatchet.chainKey=turn_ratchet_DH(sender.rootRatchet,RDH)
     messageKey=turn_ratchet(sender.sendRatchet)
@@ -277,13 +278,13 @@ def sendKey(sender,receiverName):
 
 
 def receiveKey(receiver,senderName):
-    senderPubKey=fetch_from_server(senderName,"RPubKey")
+    senderPubKey=fetch_from_server(senderName,"RPubKey.txt")
     RDH=DH(receiver.RPrivKey,senderPubKey)
     #decode message
     receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
     messageKey=turn_ratchet(receiver.recvRatchet)
     receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
-    push_to_server(receiver.name,"RPubKey",receiver.RPubKey)
+    push_to_server(receiver.name,"RPubKey.txt",receiver.RPubKey)
     return messageKey
 
 def sendMessage(sender,receiverName,message):
@@ -334,7 +335,7 @@ def sendFile(sender,receiverName,fileName):
     enc_string=""
     for i in range(len(tab_enc)):
         enc_string=enc_string+tab_enc[i]
-    push_to_server(sender.name,"enc_file",binary_to_hexa(''.join(enc_string))[2:])
+    push_to_server(sender.name,"enc_file.txt",binary_to_hexa(''.join(enc_string))[2:])
 
 
 def ReceiveFile(receiver,senderName,fileName):
@@ -345,7 +346,7 @@ def ReceiveFile(receiver,senderName,fileName):
     k=key_to_binary(receiveKey(receiver,senderName))
     sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
     #recup du chiffré
-    enc_msg=fetch_from_server(senderName,"enc_file")
+    enc_msg=fetch_from_server(senderName,"enc_file.txt")
     tab_enc=split_to_blocks(hexa_to_binary(enc_msg,BLOCK_SIZE),BLOCK_SIZE)
 
     #tournés de feistel sur les blocs du chiffré
@@ -362,7 +363,7 @@ def ReceiveFile(receiver,senderName,fileName):
         iv=tab_enc[i]
         dec_string=dec_string+tab_dec[i]
 
-    push_to_server(receiver.name,"receiveFile",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
+    push_to_server(receiver.name,"receiveFile.txt",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
     
 
 #sendFile(alice,bob.name,"sendFile")

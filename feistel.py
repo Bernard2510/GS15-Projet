@@ -1,13 +1,20 @@
 from math import ceil
 import os
 
+"""
+Sources
+https://lianglouise.github.io/post/some_practice_on_implementing_signal_protocol_with_python_1/
+https://nfil.dev/coding/encryption/python/double-ratchet-example/
+https://www.gauravvjn.com/generate-hmac-sha256-signature-in-python/
+https://github.com/conor-deegan/sandbox/blob/6a657b1938a4495eb38287be56cfeb64a2016ef2/feistel-network/feistel.py#L85
+"""
 
 def fetch_from_server(username,name):
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
     filename = name+".txt"
     file_path=os.path.join(user_path,filename)
-    with open(file_path, mode='r') as file:
+    with open(file_path, mode='br') as file:
         lines = file.readlines()
         return lines[0]
 
@@ -113,7 +120,11 @@ k=key_to_binary(key5)
 #256-320 : iV
 
 #récupère le message (fichier) à chiffrer
-msg=fetch_from_server("alice","Send_Message")
+msg=fetch_from_server("alice","sendFile")
+print(type(msg))
+a=str(msg)
+b=bytes(msg)
+print(type(b))
 #convertion du message en binaire
 msg_bin=string_to_binary(msg,BLOCK_SIZE)
 
@@ -156,7 +167,7 @@ for i in range(len(tab_enc)):
     iv=tab_enc[i]
     dec_string=dec_string+tab_dec[i]
 
-push_to_server("bob","Receive_Message",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
+push_to_server("bob","receiveFile",binary_to_string(split_to_blocks(''.join(dec_string), 8)))
 e=""
 d=""
 
