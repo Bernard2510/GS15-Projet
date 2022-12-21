@@ -1,0 +1,11 @@
+Solutions mises en œuvre et justification :
+-	Génération des clés
+-	Signature DSA
+-	X3dh
+-	Double ratchet
+-	Chiffrement fichier
+-	Chiffrement flux
+
+Difficultés rencontrées :
+
+Axes d’amélioration :
