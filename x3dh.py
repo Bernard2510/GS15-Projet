@@ -96,9 +96,6 @@ def string_to_binary(string):
 def padding(bin_string,block_size):
     return bin_string.ljust(block_size * ceil(len(bin_string)/block_size), '0')
 
-#a revoir
-def unpadding(bin_string):
-    return bin_string[:-ord(bin_string[len(bin_string)-1:])]
 
 def split_to_blocks(msg, block_size):
     nb_block = ceil(len(msg)/block_size)
@@ -334,6 +331,7 @@ def sendFile(sender,receiverName,fileName):
 
     #récupère le message (fichier) à chiffrer
     msg=fetch_from_server(sender.name,fileName)
+    print(create_sha256_signature(k[320:512],msg))
     #convertion du message en binaire
     msg_bin=string_to_binary(msg)
     msg_bin=padding(msg_bin,BLOCK_SIZE)
@@ -387,13 +385,14 @@ def ReceiveFile(receiver,senderName):
         tab_dec[i]=bin(tab_dec[i])[2:].zfill(BLOCK_SIZE)
         iv=tab_enc[i]
         dec_string=dec_string+tab_dec[i]
-    #dec_string=unpadding(dec_string)
 
-    push_to_server(receiver.name,"receiveFile.txt",binary_to_string(split_to_blocks(dec_string, 8)))
+    msg=binary_to_string(split_to_blocks(dec_string, 8)).rstrip('\x00')
+    print(create_sha256_signature(k[320:512],msg))
+    push_to_server(receiver.name,"receiveFile.txt",msg)
     
 
-sendFile(alice,bob.name,"sendFile.txt")
-ReceiveFile(bob,alice.name)
+a=sendFile(alice,bob.name,"sendFile.txt")
+b=ReceiveFile(bob,alice.name)
 
 
 
