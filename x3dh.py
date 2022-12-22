@@ -15,7 +15,7 @@ class Utilisateur:
         self.idPubKey = "" #ID clé publique
         self.preSignPubKey = "" #clé publique présignée
         self.preSignPrivKey = "" #clé privée présignée
-        self.SignSPKPub = []
+        self.SignSPKPub = [] #liste de clés publiques présignées signées
         self.otPrivKey = [] #liste de clés one time session privée
         self.otPubKey = [] #liste de clés one time session privée
         self.SK = "" #clé partagé
@@ -391,7 +391,7 @@ def gen_signKey(username,key,IDPrivKey):
     p = fetch_from_server(username,"PARAMSignPubKey_P.txt")
     q = fetch_from_server(username,"PARAMSignPubKey_Q.txt")
     g = fetch_from_server(username,"PARAMSignPubKey_G.txt")
-    s1,s2 = signDSA(p,q,g,IDPrivKey,key) #ici key représente le message dans la fonction DSA originale
+    s1,s2 = signDSA(int(p),int(q),int(g),int(IDPrivKey),str(key)) #ici key représente le message dans la fonction DSA originale
     return s1,s2
 
 def generate_bundle(user):
@@ -399,6 +399,7 @@ def generate_bundle(user):
     user.preSignPrivKey, user.preSignPubKey = gen_key_pair() #signé avec idPrivK, idPubK
     user.otPrivKey = [0]*MAX_OTPK
     user.otPubKey = [0]*MAX_OTPK
+    user.SignSPKPub = [0]*2
     user.SignSPKPub[0], user.SignSPKPub[1]=gen_signKey(user.name,user.preSignPubKey,user.idPrivKey)
     for i in range(MAX_OTPK):
         user.otPrivKey[i], user.otPubKey[i]=gen_key_pair()
@@ -407,6 +408,8 @@ def generate_bundle(user):
 def publish_bundle(user):
     push_to_server(user.name,"idPubKey.txt",user.idPubKey)
     push_to_server(user.name,"preSignPubKey.txt",user.preSignPubKey)
+    push_to_server(user.name,"SignSPKeyPub1.txt",user.SignSPKPub[0])
+    push_to_server(user.name,"SignSPKeyPub2.txt",user.SignSPKPub[1])
     for i in range(len(user.otPubKey)):
         push_to_server(user.name,"otPubKey"+str(i)+".txt",user.otPubKey[i])
 
@@ -415,6 +418,9 @@ def get_user_bundle(username):
     bundle = Bundle()
     bundle.idPubKey = fetch_from_server(username,"idPubKey.txt")
     bundle.preSignPubKey = fetch_from_server(username,"preSignPubKey.txt")
+    bundle.SignSPKPub = [0]*2
+    bundle.SignSPKPub[0] = fetch_from_server(username,"SignSPKeyPub1.txt")
+    bundle.SignSPKPub[1] = fetch_from_server(username,"SignSPKeyPub2.txt")
     bundle.n = random.randrange(MAX_OTPK)
     bundle.otPKn = fetch_from_server(username,"otPubKey"+str(bundle.n)+".txt")
     return bundle
@@ -426,6 +432,13 @@ def get_x3dh_info(username):
     remove_from_server(username,"EphPubKey.txt")
     remove_from_server(username,"n.txt")
     return idPubK, EphPubK, n
+
+def get_user_signParam(username):
+    p = fetch_from_server(username,"PARAMSignPubKey_P.txt")
+    q = fetch_from_server(username,"PARAMSignPubKey_Q.txt")
+    g = fetch_from_server(username,"PARAMSignPubKey_G.txt")
+    y = fetch_from_server(username,"PARAMSignPubKey_Y.txt")
+    return p,q,g,y
 
 def establish_session(receiverName):
     receiverBundle=get_user_bundle(receiverName)
@@ -449,7 +462,11 @@ def create_sha256_signature(key, message):
 
 def x3dh_sender(sender, receiverName):
     receiverBundle, EphPrivK, EphPubK = establish_session(receiverName)
-    #verif signature
+    
+    p,q,g,y = get_user_signParam(receiverName) #Verifie la signature de la clé pré-signé publique
+    if verifDSA(int(receiverBundle.SignSPKPub[0]),int(receiverBundle.SignSPKPub[1]),int(p),int(q),int(g),int(y),receiverBundle.preSignPubKey)==False:
+        quit()
+    
     DH1 = DH(sender.idPrivKey,receiverBundle.preSignPubKey)
     DH2 = DH(EphPrivK,receiverBundle.idPubKey)
     DH3 = DH(EphPrivK,receiverBundle.preSignPubKey)
@@ -474,9 +491,6 @@ def x3dh_receiver(receiver, senderName):
     #regenere OneTimeKey utilisee
     receiver.otPrivKey[int(n)], receiver.otPubKey[int(n)]=gen_key_pair()
     del DH1, DH2, DH3, DH4, DHf, sender_EphPubK, sender_idPubK, n
-
-
-
 
 
 

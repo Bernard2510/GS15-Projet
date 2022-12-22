@@ -220,12 +220,12 @@ def verifDSA(s1,s2,p,q,g,y,M): #Permet de vérifier la signature DSA
         print("Signature non-valide")
         return False
 
-IDpriv, IDpub = gen_IDKey()
-p,q,g,y= genkeyDSA(IDpriv)
-M="12345"
-M2="1234"
-s1,s2 = signDSA(p,q,g,IDpriv,M)
-verifDSA(s1,s2,p,q,g,y,M)
+# IDpriv, IDpub = gen_IDKey()
+# p,q,g,y= genkeyDSA(IDpriv)
+# M="12345"
+# M2="1234"
+# s1,s2 = signDSA(p,q,g,IDpriv,M)
+# verifDSA(s1,s2,p,q,g,y,M)
 
 def gen_presignKey(key,IDprivkey):
     genkeyDSA(IDprivkey)
@@ -234,3 +234,6 @@ def gen_presignKey(key,IDprivkey):
     
     return s1,s2
 
+M=123
+hash = int(hashlib.sha256(M).hexdigest(),16)
+print(hash)
