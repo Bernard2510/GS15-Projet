@@ -289,7 +289,7 @@ def signDSA(p,q,g,IDpriv,M): #On signe le message avec la clé privée ID et les
 def verifDSA(s1,s2,p,q,g,y,M): #Permet de vérifier la signature DSA
    
     if (s1<0 | s1>q) & (s2<0 & s2>q):
-        print("erreur")
+        print("Valeur signature erronée")
         return False
     
     hash = int(hashlib.sha256(M.encode('utf-8')).hexdigest(),16)
