@@ -196,6 +196,8 @@ def gen_IDKey(): #Permet de générer les clés identités d'un utilisateur
         if choix =="1":
             print("Vous avez choisi les paramètres par défaut.")
             p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759 #2048  #à générer avec l'algorithme au dessus
+            push_to_server("","Value_P.txt",p)
+            print("p: ",p)
             g = gen_elementgen(p) 
             IDpriv = secrets.randbits(2048)
             IDpub =pow(g,IDpriv,p)
@@ -203,6 +205,7 @@ def gen_IDKey(): #Permet de générer les clés identités d'un utilisateur
         if choix =="2":
             print("Vous avez choisi de générer un nouveau couple de clés.")
             p = gen_safeprime()
+            push_to_server("","Value_P.txt",p)
             g = gen_elementgen(p)
             IDpriv = secrets.randbits(2048)
             IDpub =pow(g,IDpriv,p)
@@ -224,18 +227,8 @@ def genkeyDSA(username,IDpriv): #On génère p, q, k tel que p-1=k*q avec p et q
 
     x=IDpriv
     print("Génération des clés DSA :")
-    choix = ""
     
-    while True:
-        choix = input("Ecrivez (1) pour laisser les clés par défaut pour démonstration, écrivez (2) pour générer de nouvelles clés.\n")
-        if choix=="1":
-            print("Vous avez choisi les paramètres par défaut.")
-            p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759
-            break
-        if choix=="2":
-            print("Vous avez choisi de générer une nouvelle clé.")
-            p = gen_safeprime()
-            break
+    p=int(fetch_from_server("","Value_P.txt"))
 
     print("p: ",p)
     q = (p-1)//2 
@@ -380,15 +373,17 @@ def feistel_decrypt(data,key,rounds):
 """
 
 def gen_key_pair():
-    p = 11476114425077445636913897780729058814788399522553701049280397688323001276391084717487591797788773737035134819088321086678078901084786890698833590212793893
-    g = 5
-    priv = random.randrange(2, p-1)
-    pub = pow(g,priv,p)
+    p = fetch_from_server("","Value_P.txt")
+
+    gen1 = secrets.randbits(512)
+    priv=pow(int(gen1),1,int(p))
+    gen2 = secrets.randbits(512)
+    pub=pow(int(gen2),1,int(p))
     return priv, pub
 
 def gen_signKey(username,key,IDPrivKey):
     genkeyDSA(username,IDPrivKey)
-    p = fetch_from_server(username,"PARAMSignPubKey_P.txt")
+    p = fetch_from_server("","Value_P.txt")
     q = fetch_from_server(username,"PARAMSignPubKey_Q.txt")
     g = fetch_from_server(username,"PARAMSignPubKey_G.txt")
     s1,s2 = signDSA(int(p),int(q),int(g),int(IDPrivKey),str(key)) #ici key représente le message dans la fonction DSA originale
