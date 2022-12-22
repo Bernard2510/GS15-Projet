@@ -34,64 +34,13 @@ def concat(x,y):
     c_y=str(y)
     return (int(c_x+c_y))
 
-def hmac_sha256(chainkey,data):
-    ipad=hex(0x36)
-    opad=hex(0x5c)
-    i_key_pad=chainkey^int(ipad, base=16)
-    o_key_pad=chainkey^int(opad, base=16)
-
-    hash_sum_1=hashlib.sha256(str(concat(i_key_pad,data)).encode('ASCII')).hexdigest() #note : implementer sha256
-    hash_sum_2=hashlib.sha256(str(concat(o_key_pad,int(hash_sum_1, base=16))).encode('ASCII')).hexdigest()
-
-    #retour cle de com (pour le chiffrement)
-    #retour cle chaine pour la prochaine iteration du hmac
-    return hash_sum_2
 
 def quotient(a,b):
     return a // b
 
+
 def reste(a,b):
     return a % b
-
-def bezout(a,b):
-    r0=a
-    r1=b
-    q=0
-    r2=1
-
-    x0=1
-    x1=0
-    y0=0
-    y1=1
-
-    n=0
-
-    while(r2!=0):
-        q=quotient(r0,r1)
-        r2=reste(r0,r1)
-        r0=r1
-        r1=r2
-
-        x = q * x1 + x0
-        x0 = x1
-        x1 = x
-
-        y = q * y1 + y0
-        y0 = y1
-        y1 = y
-
-        n=n+1
-
-    x = x0 * (-1)**n
-    y = y0 * (-1)**(n+1)
-    #print("pgcd : ", r0)
-    #print("n : ", n)
-    #print("x : ", x)
-    #print("y : ", y)
-    inverse=x%b
-    print("inverse : ", x % b)
-    return inverse
-
 
 
 def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itérations de l'algo
@@ -125,18 +74,20 @@ def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itération
     
     return True
 
+
 def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
     
     nombreAlea = secrets.randbits(longueur)
     
     while gmpy2.is_prime(nombreAlea,25)==False:
-        nombreAlea = secrets.randbits(longueur)   #revoir génération nombre aléa 
+        nombreAlea = secrets.randbits(longueur)   
     
     prime=nombreAlea
     #print(prime.bit_length())
     #print("prime :",prime)
    
     return prime
+
 
 def gen_safeprime(): #Génère un nombre fortement premier
     
@@ -181,7 +132,6 @@ def gen_IDKey(): #Permet de générer les clés identités d'un utilisateur
             IDpriv = secrets.randbits(2048)
             IDpub =pow(g,IDpriv,p)
             return IDpriv, IDpub
-
 
 
 def genkeyDSA(IDpriv): #On génère p, q, k tel que p-1=k*q avec p et q premier cependant pour faciliter les calculs on a pris k=2 et on se retrouve sur un problème d'existence d'un élément fortement premier
@@ -277,5 +227,10 @@ M2="1234"
 s1,s2 = signDSA(p,q,g,IDpriv,M)
 verifDSA(s1,s2,p,q,g,y,M)
 
+def gen_presignKey(key,IDprivkey):
+    genkeyDSA(IDprivkey)
 
+    signDSA(p,q,g,IDpriv,key)
+    
+    return s1,s2
 
