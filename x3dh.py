@@ -331,7 +331,7 @@ def sendFile(sender,receiverName,fileName):
 
     #récupère le message (fichier) à chiffrer
     msg=fetch_from_server(sender.name,fileName)
-    print(create_sha256_signature(k[320:512],msg))
+    sign=create_sha256_signature(k[320:512],msg)
     #convertion du message en binaire
     msg_bin=string_to_binary(msg)
     msg_bin=padding(msg_bin,BLOCK_SIZE)
@@ -358,6 +358,7 @@ def sendFile(sender,receiverName,fileName):
     for i in range(len(tab_enc)):
         enc_string=enc_string+tab_enc[i]
     push_to_server(sender.name,sender.name+"_to_"+receiverName+".txt",binary_to_hexa(enc_string)[2:])
+    push_to_server(sender.name,"Sign"+sender.name+"_to_"+receiverName+".txt",sign)
 
 
 def ReceiveFile(receiver,senderName):
@@ -387,8 +388,13 @@ def ReceiveFile(receiver,senderName):
         dec_string=dec_string+tab_dec[i]
 
     msg=binary_to_string(split_to_blocks(dec_string, 8)).rstrip('\x00')
-    print(create_sha256_signature(k[320:512],msg))
-    push_to_server(receiver.name,"receiveFile.txt",msg)
+    sign2=create_sha256_signature(k[320:512],msg)
+    sign=fetch_from_server(senderName,"Sign"+senderName+"_to_"+receiver.name+".txt")
+    remove_from_server(senderName,"Sign"+senderName+"_to_"+receiver.name+".txt")
+    if sign!=sign2:
+        print("Erreur de transmission")
+    else:
+        push_to_server(receiver.name,"receiveFile.txt",msg)
     
 
 a=sendFile(alice,bob.name,"sendFile.txt")
