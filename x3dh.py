@@ -198,7 +198,9 @@ def gen_IDKey(): #Permet de générer les clés identités d'un utilisateur
             p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759 #2048  #à générer avec l'algorithme au dessus
             push_to_server("","Value_P.txt",p)
             print("p: ",p)
-            g = gen_elementgen(p) 
+            #g = gen_elementgen(p) 
+            #push_to_server("","Value_G.txt",g)
+            g=int(fetch_from_server("","Value_G.txt"))
             IDpriv = secrets.randbits(2048)
             IDpub =pow(g,IDpriv,p)
             return IDpriv, IDpub
@@ -207,6 +209,7 @@ def gen_IDKey(): #Permet de générer les clés identités d'un utilisateur
             p = gen_safeprime()
             push_to_server("","Value_P.txt",p)
             g = gen_elementgen(p)
+            push_to_server("","Value_G.txt",g)
             IDpriv = secrets.randbits(2048)
             IDpub =pow(g,IDpriv,p)
             return IDpriv, IDpub
@@ -373,12 +376,17 @@ def feistel_decrypt(data,key,rounds):
 """
 
 def gen_key_pair():
-    p = fetch_from_server("","Value_P.txt")
+    p = int(fetch_from_server("","Value_P.txt"))
 
+    """
     gen1 = secrets.randbits(512)
     priv=pow(int(gen1),1,int(p))
     gen2 = secrets.randbits(512)
     pub=pow(int(gen2),1,int(p))
+    """
+    gen = int(fetch_from_server("","Value_G.txt"))
+    priv = secrets.randbits(512)
+    pub = pow(gen,priv,p)
     return priv, pub
 
 def gen_signKey(username,key,IDPrivKey):
@@ -441,7 +449,8 @@ def establish_session(receiverName):
     return receiverBundle, EphPrivK, EphPubK
 
 def DH(a,B):
-    p = 11476114425077445636913897780729058814788399522553701049280397688323001276391084717487591797788773737035134819088321086678078901084786890698833590212793893
+    p = int(fetch_from_server("","Value_P.txt"))
+    #p = 11476114425077445636913897780729058814788399522553701049280397688323001276391084717487591797788773737035134819088321086678078901084786890698833590212793893
     return pow(int(B),int(a),p)
 
 import hmac
@@ -463,9 +472,17 @@ def x3dh_sender(sender, receiverName):
         quit()
     
     DH1 = DH(sender.idPrivKey,receiverBundle.preSignPubKey)
+    print("DH1")
+    print(DH1)
     DH2 = DH(EphPrivK,receiverBundle.idPubKey)
+    print("DH2")
+    print(DH2)
     DH3 = DH(EphPrivK,receiverBundle.preSignPubKey)
+    print("DH3")
+    print(DH3)
     DH4 = DH(EphPrivK,receiverBundle.otPKn)
+    print("DH4")
+    print(DH4)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
     sender.SK=SK
@@ -477,9 +494,17 @@ def x3dh_sender(sender, receiverName):
 def x3dh_receiver(receiver, senderName):
     sender_idPubK, sender_EphPubK, n = get_x3dh_info(senderName)
     DH1 = DH(receiver.preSignPrivKey, sender_idPubK)
+    print("DH1")
+    print(DH1)
     DH2 = DH(receiver.idPrivKey, sender_EphPubK)
+    print("DH2")
+    print(DH2)
     DH3 = DH(receiver.preSignPrivKey, sender_EphPubK)
+    print("DH3")
+    print(DH3)
     DH4 = DH(receiver.otPrivKey[int(n)],sender_EphPubK)
+    print("DH4")
+    print(DH4)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
     receiver.SK=SK
