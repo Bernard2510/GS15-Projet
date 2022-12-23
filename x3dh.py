@@ -515,20 +515,13 @@ def x3dh_sender(sender, receiverName):
         quit()
     
     DH1 = DH(sender.idPrivKey,receiverBundle.preSignPubKey)
-    print("DH1")
-    print(DH1)
     DH2 = DH(EphPrivK,receiverBundle.idPubKey)
-    print("DH2")
-    print(DH2)
     DH3 = DH(EphPrivK,receiverBundle.preSignPubKey)
-    print("DH3")
-    print(DH3)
     DH4 = DH(EphPrivK,receiverBundle.otPKn)
-    print("DH4")
-    print(DH4)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
     sender.SK=SK
+    print("SK "+sender.name+" : ")
     print(SK)
     push_to_server(sender.name,"EphPubKey.txt",EphPubK)
     push_to_server(sender.name,"n.txt",receiverBundle.n)
@@ -538,19 +531,12 @@ def x3dh_sender(sender, receiverName):
 def x3dh_receiver(receiver, senderName):
     sender_idPubK, sender_EphPubK, n = get_x3dh_info(senderName)
     DH1 = DH(receiver.preSignPrivKey, sender_idPubK)
-    print("DH1")
-    print(DH1)
     DH2 = DH(receiver.idPrivKey, sender_EphPubK)
-    print("DH2")
-    print(DH2)
     DH3 = DH(receiver.preSignPrivKey, sender_EphPubK)
-    print("DH3")
-    print(DH3)
     DH4 = DH(receiver.otPrivKey[int(n)],sender_EphPubK)
-    print("DH4")
-    print(DH4)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
+    print("SK "+receiver.name+" : ")
     print(SK)
     receiver.SK=SK
     #regenere OneTimeKey utilisee
@@ -629,12 +615,14 @@ def sendMessage(sender,receiverName,message):
     #recup clé d'envoi
     k=string_to_binary(sendKey(sender,receiverName))
     #encoder message
+    return vernam_chiffrement(message,k)
     
 
 def receiveMessage(receiver,senderName,enc_msg):
     #recup clé de reception
     k=string_to_binary(receiveKey(receiver,senderName))
     #decoder enc_msg
+    return vernam_dechiffrement(enc_msg,k)
     
 
 
@@ -717,8 +705,18 @@ def ReceiveFile(receiver,senderName):
         print("Message envoyé")
     
 
-a=sendFile(alice,bob.name,"sendFile.txt")
-b=ReceiveFile(bob,alice.name)
+sendFile(alice,bob.name,"sendFile.txt")
+ReceiveFile(bob,alice.name)
+
+message = "Salut comment ca va? a123^^ez%°+°°32///..EZREMRMLEZRALXMZEA"
+a=sendMessage(alice,bob.name,message)
+print(a)
+b=receiveMessage(bob,alice.name,a)
+print(b)
+
+
+
+
 
 
 
