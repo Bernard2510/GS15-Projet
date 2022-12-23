@@ -227,13 +227,39 @@ def verifDSA(s1,s2,p,q,g,y,M): #Permet de vérifier la signature DSA
 # s1,s2 = signDSA(p,q,g,IDpriv,M)
 # verifDSA(s1,s2,p,q,g,y,M)
 
-def gen_presignKey(key,IDprivkey):
-    genkeyDSA(IDprivkey)
+def vernam_chiffrement(message,key):
 
-    signDSA(p,q,g,IDpriv,key)
-    
-    return s1,s2
+    message_length=len(message)
+    key_length=len(key)
+    nbFois=message_length//key_length
+    nbReste=message_length%key_length
+    keyFormate=key*nbFois+key[:nbReste]
 
-M=123
-hash = int(hashlib.sha256(M).hexdigest(),16)
-print(hash)
+    msg_chiffre=""
+    i=0
+    for char in message:
+        msg_chiffre=msg_chiffre+ chr(ord(char)^ ord(keyFormate[i]))
+        i+=1
+    return msg_chiffre
+
+def vernam_dechiffrement(msg_chiffre,key):
+
+    message_length=len(msg_chiffre)
+    key_length=len(key)
+    nbFois=message_length//key_length
+    nbReste=message_length%key_length
+    keyFormate=key*nbFois+key[:nbReste]
+
+    msg_clair=""
+    i=0
+    for char in msg_chiffre:
+        msg_clair=msg_clair+ chr(ord(char)^ ord(keyFormate[i]))
+        i+=1
+    return msg_clair
+
+
+key ="KEJXEZAZEZzeaeazxzae325465ra5464razea"
+
+encrypte = vernam_chiffrement("Salut comment ca va? a123^^ez%°+°°32///..EZREMRMLEZRALXMZEA",key)
+print(encrypte)
+print(vernam_dechiffrement(encrypte,key))

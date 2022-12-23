@@ -209,7 +209,7 @@ def gen_ValueParam(): #Permet de générer les valeurs p (fortement premier) et 
             push_to_server("","Value_G.txt",g)
             break
 
-def gen_IDkey():
+def gen_IDkey(): #Permet de générer les clés identités.
 
     print("Génération des clés identités.")
 
@@ -311,6 +311,51 @@ def verifDSA(s1,s2,p,q,g,y,M): #Permet de vérifier la signature DSA
     else:
         print("Signature non-valide")
         return False
+
+"""
+===============================================================
+===============================================================
+"""
+
+"""
+===============================================================
+Chiffrement de flux Vernam 
+(chiffrement et déchiffrement)
+===============================================================
+"""
+
+def vernam_chiffrement(message,key): #Prend en paramètres un message str et la clé (ici la clé SK partagée)
+
+    #Fonctionnement : Comme la clé est d'une taille fixe, on va la multiplier et la formater afin qu'elle fasse la même taille que le message pour faire un chiffrement XOR vernam avec.
+
+    message_length=len(message)
+    key_length=len(key)
+    nbFois=message_length//key_length
+    nbReste=message_length%key_length
+    keyFormate=key*nbFois+key[:nbReste]
+
+    msg_chiffre=""
+    i=0
+    for char in message:
+        msg_chiffre=msg_chiffre+ chr(ord(char)^ ord(keyFormate[i]))
+        i+=1
+    return msg_chiffre
+
+def vernam_dechiffrement(msg_chiffre,key): #Exactement pareil que le chiffrement mais avec nom différent pour se retrouver.
+
+    message_length=len(msg_chiffre)
+    key_length=len(key)
+    nbFois=message_length//key_length
+    nbReste=message_length%key_length
+    keyFormate=key*nbFois+key[:nbReste]
+
+    msg_clair=""
+    i=0
+    for char in msg_chiffre:
+        msg_clair=msg_clair+ chr(ord(char)^ ord(keyFormate[i]))
+        i+=1
+    return msg_clair
+
 
 """
 ===============================================================
@@ -484,6 +529,7 @@ def x3dh_sender(sender, receiverName):
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
     sender.SK=SK
+    print(SK)
     push_to_server(sender.name,"EphPubKey.txt",EphPubK)
     push_to_server(sender.name,"n.txt",receiverBundle.n)
     del DH1, DH2, DH3, DH4, DHf, receiverBundle, EphPrivK, EphPubK
@@ -505,6 +551,7 @@ def x3dh_receiver(receiver, senderName):
     print(DH4)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
     SK = create_sha256_signature(DHf,"INIT")
+    print(SK)
     receiver.SK=SK
     #regenere OneTimeKey utilisee
     receiver.otPrivKey[int(n)], receiver.otPubKey[int(n)]=gen_key_pair()
@@ -672,7 +719,6 @@ def ReceiveFile(receiver,senderName):
 
 a=sendFile(alice,bob.name,"sendFile.txt")
 b=ReceiveFile(bob,alice.name)
-
 
 
 
