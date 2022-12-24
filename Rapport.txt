@@ -9,3 +9,9 @@ Solutions mises en œuvre et justification :
 Difficultés rencontrées :
 
 Axes d’amélioration :
+
+Sources:
+https://lianglouise.github.io/post/some_practice_on_implementing_signal_protocol_with_python_1/
+https://nfil.dev/coding/encryption/python/double-ratchet-example/
+https://www.gauravvjn.com/generate-hmac-sha256-signature-in-python/
+https://github.com/conor-deegan/sandbox/blob/6a657b1938a4495eb38287be56cfeb64a2016ef2/feistel-network/feistel.py#L85
