@@ -665,6 +665,7 @@ def sendFile(sender,receiverName,fileName):
     #k=512 bits
     #0-256 : key
     #256-320 : iV
+    #320-512 : hmac
 
     #récupère le message (fichier) à chiffrer
     msg=fetch_from_server(sender.name,fileName)
