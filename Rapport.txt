@@ -8,6 +8,7 @@ Il peut alors calculer la clé partagé SK. Enfin que Bob puisse également calc
 -	Double ratchet
 Pour la KDF il a été choisi d'utiliser le hmac_sha256 (comme dans le protocol signal). Cette focntion n'a pas été implémentée.
 Ainsi pour cela la bibliothèque hmac est utilisée, on obtient une signature hmac en fournissant byte_key, un message.
+root ratchet (seed SK) qui donne la seed a send ratchet et receiv ratchet
 
 -	Chiffrement fichier
 Pour le chiffrement de bloc, il a été choisit d'effectuer un chiffrement par bloc de fesitel en mode CBC.
