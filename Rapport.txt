@@ -19,6 +19,9 @@ Bits de 256 à 320 : IV pour le mode CBC
 Bits de 320 à 512 : clé pour l’authentification HMAC
 Le contenu du fichier à envoyer est converti également en binaire et divisé en bloc de 64 bits. La clé est également divisée en 8 sous-clés (une pour chaque tournée). On utilise pour fonction de Feistel une fonction xor. Le résultat chiffré est converti en hexadécimal pour pouvoir etre inscrit dans un fichier et publié sur le serveur. De cette façon l'utilisateur a qui est destiné le message peut récupérer sur le serveur le message et le HMAC correspondant. Il peut ainsi effectuer les opérations inverses, vérifier l'authenticité du message et obtenir le fichier.
 
+-   HMAC
+Nous avons également choisi d'implémenter une virification de l'intégrité et de l'authenticité des messages pour les deux chiffrements de flux et de blocs au moins du HMAC. Ainsi celui ci est transmis avec le message et vérifié par le récepteur avec sa clé.
+
 -	Chiffrement flux
 
 Difficultés rencontrées :

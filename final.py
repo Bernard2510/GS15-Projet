@@ -642,18 +642,26 @@ Fonctions utilisateurs (Envoi/Reception de Message/Fichier)
 def sendMessage(sender,receiverName,message):
     #recup clé d'envoi
     k=string_to_binary(sendKey(sender,receiverName))
+    #hmac
+    sign=create_sha256_signature(k,message)
     #encoder message
     print(sender.name+" a envoye un message a "+receiverName+" : "+message)
-    return vernam_chiffrement(message,k)
+    return vernam_chiffrement(message,k),sign
     
 
-def receiveMessage(receiver,senderName,enc_msg):
+def receiveMessage(receiver,senderName,enc_msg,sign):
     #recup clé de reception
     k=string_to_binary(receiveKey(receiver,senderName))
     #decoder enc_msg
+    dec_msg=vernam_dechiffrement(enc_msg,k)
+    sign2=create_sha256_signature(k,dec_msg)
     print(receiver.name+" a reçu un message de "+senderName)
-    return vernam_dechiffrement(enc_msg,k)
-    
+    print("Verification hmac")
+    if sign!=sign2:
+        print("Erreur de transmission")
+    else:
+        print("Message reçu")
+        return dec_msg
 
 
 def sendFile(sender,receiverName,fileName):
@@ -731,7 +739,7 @@ def ReceiveFile(receiver,senderName):
     sign=fetch_from_server(senderName,"Sign"+senderName+"_to_"+receiver.name+".txt")
     remove_from_server(senderName,"Sign"+senderName+"_to_"+receiver.name+".txt")
     print(receiver.name+" reçoit un fichier de "+senderName)
-    print("Verification siganture hmac")
+    print("Verification hmac")
     if sign!=sign2:
         print("Erreur de transmission")
     else:
@@ -781,9 +789,9 @@ def actionChoice(sender,receiver):
             val=True
             print("Taper votre message (Entrer pour valdier) :")
             message= input(">")
-            enc_msg=sendMessage(sender,receiver.name,message)
+            enc_msg,sign=sendMessage(sender,receiver.name,message)
             print("Message encodé : "+enc_msg)
-            reception(receiver,sender.name,"message",enc_msg)
+            reception(receiver,sender.name,"message",enc_msg,sign)
         elif choix =="2":
             val=True
             sendFile(sender,receiver.name,"sendFile.txt")
@@ -791,7 +799,7 @@ def actionChoice(sender,receiver):
 
 
 
-def reception(receiver,senderName,type,enc_msg=""):
+def reception(receiver,senderName,type,enc_msg="",sign=""):
     val=False
     while(val==False):
         print("\n"+receiver.name+" vous avez reçu un message de "+senderName)
@@ -800,7 +808,7 @@ def reception(receiver,senderName,type,enc_msg=""):
         if choix =="1":
             val=True
             if(type=="message"):
-                msg=receiveMessage(receiver,senderName,enc_msg)
+                msg=receiveMessage(receiver,senderName,enc_msg,sign)
                 print("Message decodé : "+msg)
             elif(type=="file"):
                 ReceiveFile(receiver,senderName)
