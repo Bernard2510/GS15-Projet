@@ -53,22 +53,26 @@ Fonction intéraction avec serveur
 ===============================================================
 """
 
-def push_to_server(username,name,content):
+def push_to_server(username,name,content): #crée un fichier sur le serveur
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
 
-    #if server doesnt exist
+    #si le repertoire du serveur n'existe pas il est crée
     try:
         os.mkdir(server_path)
     except OSError:
         pass
 
-    #if user folder doesnt exist
+    #si le repertoire de l'utilisateur n'existe pas il est crée
     try:
         os.mkdir(user_path)
     except OSError:
         pass
     
+    #un fichier <filename> est crée dans le repertoire server/<username>
+    #contenant le donnée à publier
+    #le nom du fichier correpond au nom de la donnée
+    #si un fichier du meme nom existe deja il est remplacé
     filename = name
     file_path=os.path.join(user_path,filename)
     with open(file_path,mode='w') as file:
@@ -76,11 +80,12 @@ def push_to_server(username,name,content):
         
 
 
-def fetch_from_server(username,name):
+def fetch_from_server(username,name): #recupère le contenu d'un fichier sur le serveur
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
     filename = name
     file_path=os.path.join(user_path,filename)
+    #on recupere le contenu du fichier server/<username>/<filename>
     with open(file_path, mode='r') as file:
         lines = file.readlines()
         string=""
@@ -88,10 +93,10 @@ def fetch_from_server(username,name):
             string=string+str(l)
         return string
 
-def remove_from_server(username,name):
+def remove_from_server(username,filename): #supprime un fichier sur le serveur
+    #on supprime le fichier server/<username>/<filename>
     server_path=os.getcwd()+"\server"
     user_path=os.path.join(server_path,username)
-    filename = name
     file_path=os.path.join(user_path,filename)
     os.remove(file_path)
 
@@ -385,25 +390,26 @@ Chiffrement de bloc Feistel
 (chiffrement et déchiffrement)
 ===============================================================
 """
-def binary_to_hexa(bits):
+def binary_to_hexa(bits): #convertie un suite binaire en valeur hexadecimal
     return hex(int(bits, 2))
 
-def hexa_to_binary(hex,block_size):
+def hexa_to_binary(hex,block_size): #convertie une valeur hexadecimal en suite binaire
     hex=bin(int(hex, 16))[2:]
     pad=ceil(len(hex)/block_size)*block_size
     return hex.zfill(pad)
 
-def string_to_binary(string):
+def string_to_binary(string): #convertie une chaine de caractere en suite binaire
     str = ''.join('{:08b}'.format(ord(c)) for c in string)
     return str
 
-def binary_to_string(bits):
+def binary_to_string(bits): #convertie une suite binaire en chaine de caractere
     return ''.join([chr(int(x, 2)) for x in bits])
 
-def padding(bin_string,block_size):
+def padding(bin_string,block_size): #ajoute des '0' à la fin d'une suite binaire
+    #on ajoute autant de '0' que necessaire afin que la taille de la suite binaire soit un multiple de la taille de bloc choisie
     return bin_string.ljust(block_size * ceil(len(bin_string)/block_size), '0')
 
-def split_to_blocks(msg, block_size):
+def split_to_blocks(msg, block_size): #divise une suite binaire en bloc de taille choisie
     nb_block = ceil(len(msg)/block_size)
     res=[""]*nb_block
     for i in range(nb_block):
@@ -411,13 +417,17 @@ def split_to_blocks(msg, block_size):
     return res
 
 #Fonction de feistel
-def xor(K,D):
+def xor(K,D): #xor de deux elements binaires
     return int(K,base=2)^int(D,base=2)
 
-def feistel_encrypt(data,key,rounds):
+def feistel_encrypt(data,key,rounds): #chiffrement par tournée de Feistel
+    #la suite binaire a chiffree est divisee en deux blocs (bloc de droite et bloc de gauche)
     G0=data[:int(len(data)/2)]
     D0=data[int(len(data)/2):]
     T=rounds
+    #on applique T tournées de feistel 
+    #pour chaque tournée Gi+1 prend la valeur de Di
+    #Di+1 prend la valeur de Gi xoré avec le resultat du xor (fonction de Feistel) de Ki et Di
     for i in range(T):
         G1=D0
         D1Dec=int(G0,base=2)^xor(key[i],D0)
@@ -427,10 +437,14 @@ def feistel_encrypt(data,key,rounds):
         D0=D1  
     return G1+""+D1
     
-def feistel_decrypt(data,key,rounds):
+def feistel_decrypt(data,key,rounds): #déchiffrement par tournée de Feistel
+    #la suite binaire a dechiffree est divisee en deux blocs (bloc de droite et bloc de gauche)
     G1=data[:int(len(data)/2)]
     D1=data[int(len(data)/2):]
     T=rounds
+    #on applique T tournées de feistel 
+    #Gi-1 prend la valeur de Di xoré avec le resultat du xor (fonction de Feistel) de Ki et Gi
+    #pour chaque tournée Di-1 prend la valeur de Gi
     for i in range(T):
         G0Dec=int(D1,base=2)^xor(key[7-i],G1)
         G0=bin(G0Dec)[2:].zfill(len(D1))
@@ -452,18 +466,18 @@ Initialisation user
 ===============================================================
 """
 
-def generate_bundle(user):
-    user.idPrivKey, user.idPubKey = gen_IDkey()
-    user.preSignPrivKey, user.preSignPubKey = gen_key_pair() #signé avec idPrivK, idPubK
+def generate_bundle(user): #crée les clés d'un utilisateur pour X3DH
+    user.idPrivKey, user.idPubKey = gen_IDkey() #génération des clés identitées
+    user.preSignPrivKey, user.preSignPubKey = gen_key_pair() #génération des clés pré-signées
     user.otPrivKey = [0]*MAX_OTPK
     user.otPubKey = [0]*MAX_OTPK
     user.SignSPKPub = [0]*2
-    user.SignSPKPub[0], user.SignSPKPub[1]=gen_signKey(user.name,user.preSignPubKey,user.idPrivKey)
+    user.SignSPKPub[0], user.SignSPKPub[1]=gen_signKey(user.name,user.preSignPubKey,user.idPrivKey) #calcul de la signature de la clé publique pré-signée par la clé privée d'identité
     for i in range(MAX_OTPK):
-        user.otPrivKey[i], user.otPubKey[i]=gen_key_pair()
+        user.otPrivKey[i], user.otPubKey[i]=gen_key_pair() #génération des clés à usage unique
 
 
-def publish_bundle(user):
+def publish_bundle(user): #publie sur le serveur les clés publiques d'un utilisateur
     push_to_server(user.name,"idPubKey.txt",user.idPubKey)
     push_to_server(user.name,"preSignPubKey.txt",user.preSignPubKey)
     push_to_server(user.name,"SignSPKeyPub1.txt",user.SignSPKPub[0])
@@ -503,7 +517,7 @@ X3DH
 ===============================================================
 """
 
-def get_user_bundle(username):
+def get_user_bundle(username): #récupère sur le serveur les clés publiques d'un utilisateur nécessaire à un échange de clé X3DH
     bundle = Bundle()
     bundle.idPubKey = fetch_from_server(username,"idPubKey.txt")
     bundle.preSignPubKey = fetch_from_server(username,"preSignPubKey.txt")
@@ -511,10 +525,10 @@ def get_user_bundle(username):
     bundle.SignSPKPub[0] = fetch_from_server(username,"SignSPKeyPub1.txt")
     bundle.SignSPKPub[1] = fetch_from_server(username,"SignSPKeyPub2.txt")
     bundle.n = random.randrange(MAX_OTPK)
-    bundle.otPKn = fetch_from_server(username,"otPubKey"+str(bundle.n)+".txt")
+    bundle.otPKn = fetch_from_server(username,"otPubKey"+str(bundle.n)+".txt") #une clé à usage unique est choisie au hasard
     return bundle
 
-def get_x3dh_info(username):
+def get_x3dh_info(username): #récupère sur le serveur les clés publiques et les informations nécessaires à la finalisation par le 2nd utilisateur du protocol d'échange de clé X3DH
     idPubK = fetch_from_server(username,"idPubKey.txt")
     EphPubK = fetch_from_server(username,"EphPubKey.txt")
     n = fetch_from_server(username,"n.txt")
@@ -529,34 +543,41 @@ def get_user_signParam(username):
     y = fetch_from_server(username,"PARAMSignPubKey_Y.txt")
     return p,q,g,y
 
-def establish_session(receiverName):
+def establish_session(receiverName): #établissement du protocole d'échange de clé X3DH
+    #récupère le lot de clé de l'utilisateur avec qui initier un échange de clé X3DH
     receiverBundle=get_user_bundle(receiverName)
+    #génration des clés éphémères
     EphPrivK,EphPubK = gen_key_pair()
     return receiverBundle, EphPrivK, EphPubK
 
-def x3dh_sender(sender, receiverName):
+def x3dh_sender(sender, receiverName): #actions effectuées par l'initiateur de l'échange de clé X3DH
     receiverBundle, EphPrivK, EphPubK = establish_session(receiverName)
     
     p,q,g,y = get_user_signParam(receiverName) #Verifie la signature de la clé pré-signé publique
     if verifDSA(int(receiverBundle.SignSPKPub[0]),int(receiverBundle.SignSPKPub[1]),int(p),int(q),int(g),int(y),receiverBundle.preSignPubKey)==False:
         quit()
     
+    #calcul des DHs
     DH1 = DH(sender.idPrivKey,receiverBundle.preSignPubKey)
     DH2 = DH(EphPrivK,receiverBundle.idPubKey)
     DH3 = DH(EphPrivK,receiverBundle.preSignPubKey)
     DH4 = DH(EphPrivK,receiverBundle.otPKn)
     DHf = str(DH1)+""+str(DH2)+""+str(DH3)+""+str(DH4)
+    #calcul de la clé partagée SK
     SK = create_sha256_signature(DHf,"INIT")
     sender.SK=SK
     print("\nSK "+sender.name+" : ")
     print(SK)
+    #publie sur le serveur les éléments nécessaires au 2nd utilisateur pour qu'il puisse également calculer la clé partagée SK
     push_to_server(sender.name,"EphPubKey.txt",EphPubK)
     push_to_server(sender.name,"n.txt",receiverBundle.n)
     del DH1, DH2, DH3, DH4, DHf, receiverBundle, EphPrivK, EphPubK
 
 
-def x3dh_receiver(receiver, senderName):
+def x3dh_receiver(receiver, senderName): #actions effectuées par le partenaire de l'échange de clé X3DH
+    #récupère les informations nécessaire proveannt de l'initiateur
     sender_idPubK, sender_EphPubK, n = get_x3dh_info(senderName)
+    #calcul des DHs
     DH1 = DH(receiver.preSignPrivKey, sender_idPubK)
     DH2 = DH(receiver.idPrivKey, sender_EphPubK)
     DH3 = DH(receiver.preSignPrivKey, sender_EphPubK)
@@ -565,8 +586,9 @@ def x3dh_receiver(receiver, senderName):
     SK = create_sha256_signature(DHf,"INIT")
     print("\nSK "+receiver.name+" : ")
     print(SK)
+    #calcul de la clé partagée SK
     receiver.SK=SK
-    #regenere OneTimeKey utilisee
+    #Genere une nouvelle clé a usage unique pour remplacer celle utilisée
     receiver.otPrivKey[int(n)], receiver.otPubKey[int(n)]=gen_key_pair()
     del DH1, DH2, DH3, DH4, DHf, sender_EphPubK, sender_idPubK, n
 
@@ -580,18 +602,21 @@ def x3dh_receiver(receiver, senderName):
 Double ratchet
 ===============================================================
 """
-def init_ratchets(user,order):
-    # initialise the root chain with the shared key
+def init_ratchets(user,order): #initialisation des ratchets racine, d'envoi et de réception
+    #le ratchet racine est initialisé avec la clé partagée SK (via X3DH)
     user.rootRatchet = SymmRatchet(user.SK)
     # initialise the sending and recving chains
+    #le ratchet d'envoi puis de reception sont initialisés (inversement pour le 2nd utilisateurs)
     if order == 1:
+        #les ratchets sont initialisés avec la sortie du ratchet racine (en "tournant" le ratchet racine pour chacun)
         user.sendRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
         user.recvRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
     else:
         user.recvRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
         user.sendRatchet = SymmRatchet(turn_ratchet(user.rootRatchet))
-    # initialise DH key
+    #initialisation des clés utilisées pour calcul de clé partagée via Diffie-Helman dans l'algorithme du double ratchet
     user.RPrivKey, user.RPubKey = gen_key_pair()
+    #clé publique publiée sur le serveur
     push_to_server(user.name,"RPubKey.txt",user.RPubKey)
 
 
