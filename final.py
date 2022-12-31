@@ -620,36 +620,49 @@ def init_ratchets(user,order): #initialisation des ratchets racine, d'envoi et d
     push_to_server(user.name,"RPubKey.txt",user.RPubKey)
 
 
-def turn_ratchet(ratchet):
+def turn_ratchet(ratchet): #"Tour" de ratchet symétrique
     C1="0x01"
     C2="0x02"
+    #Les données sont OxO1 et la clé chainée pour le calcul de la clé de message
+    #KDF : HMAC-SHA256
     messageKey = create_sha256_signature(ratchet.chainKey,C1)
+    #Les données sont OxO2 et la clé chainé pour le calcul de la nouvelle clé chainée
+    #KDF : HMAC-SHA256
     ratchet.chainKey = create_sha256_signature(ratchet.chainKey,C2)
     return messageKey
 
-def turn_ratchet_DH(ratchet,dh):
+def turn_ratchet_DH(ratchet,dh): #"Tour" de ratchet symétrique avec clé partagée
+    #KDF : HMAC-SHA256
     output = create_sha256_signature(ratchet.chainKey,str(dh))
+    #premiere partie correspond à la nouvelle clé chainée
     ratchet.chainKey = output[:32]
+    #deuxième partie correspond à la clé de message
     messageKey = output[32:]
     return messageKey
 
-#Fournie la clé d'envoi
-def sendKey(sender,receiverName):
+def sendKey(sender,receiverName): #fournie la clé d'envoi
+    #mise à jour et publication sur le serveur du nouveau couple de clé
     sender.RPrivKey, sender.RPubKey = gen_key_pair()
     push_to_server(sender.name,"RPubKey.txt",sender.RPubKey)
+    #réception depuis le serveur de la clé publique de l'interlocuteur
     receiverPubKey=fetch_from_server(receiverName,"RPubKey.txt")
+    #calcul de la clé partagée
     RDH=DH(sender.RPrivKey,receiverPubKey)
+    #calcul de la clé de chiffrement via le ratchet d'envoi (et mise à jour de sa clé chainée)
     sender.sendRatchet.chainKey=turn_ratchet_DH(sender.rootRatchet,RDH)
     messageKey=turn_ratchet(sender.sendRatchet)
     print("\n"+sender.name+" send ratchet messageKey : "+messageKey)
     return messageKey
 
-#Fournie la clé de reception
-def receiveKey(receiver,senderName):
+def receiveKey(receiver,senderName): #fournie la clé de reception
+    #réception depuis le serveur de la clé publique de l'interlocuteur
     senderPubKey=fetch_from_server(senderName,"RPubKey.txt")
+    #calcul de la clé partagée
     RDH=DH(receiver.RPrivKey,senderPubKey)
+    #calcul de la clé de déchiffrement via le ratchet de reception (et mise à jour de sa clé chainée)
     receiver.recvRatchet.chainKey=turn_ratchet_DH(receiver.rootRatchet,RDH)
     messageKey=turn_ratchet(receiver.recvRatchet)
+    #mise à jour et publication sur le serveur du nouveau couple de clé
     receiver.RPrivKey, receiver.RPubKey = gen_key_pair()
     push_to_server(receiver.name,"RPubKey.txt",receiver.RPubKey)
     print("\n"+receiver.name+" receiver ratchet messageKey : "+messageKey)
@@ -664,67 +677,70 @@ def receiveKey(receiver,senderName):
 Fonctions utilisateurs (Envoi/Reception de Message/Fichier)
 ===============================================================
 """
-def sendMessage(sender,receiverName,message):
-    #recup clé d'envoi
+def sendMessage(sender,receiverName,message): #envoi d'un message chiffré (chiffrement de flux)
+    #recupération de la clé de chiffrement
     k=string_to_binary(sendKey(sender,receiverName))
-    #hmac
+    #calcul du HMAC du message a envoyer
     sign=create_sha256_signature(k,message)
-    #encoder message
+    #chiffrement du message
     print(sender.name+" a envoye un message a "+receiverName+" : "+message)
     return vernam_chiffrement(message,k),sign
     
 
-def receiveMessage(receiver,senderName,enc_msg,sign):
-    #recup clé de reception
+def receiveMessage(receiver,senderName,enc_msg,sign): #reception et déchiffrement d'un message (déchiffrement de flux) 
+    #recupération de la clé de déchiffrement
     k=string_to_binary(receiveKey(receiver,senderName))
-    #decoder enc_msg
+    #dechiffrement du message
     dec_msg=vernam_dechiffrement(enc_msg,k)
+    #calcul du HMAC du message recu
     sign2=create_sha256_signature(k,dec_msg)
     print(receiver.name+" a reçu un message de "+senderName)
+    #verification du HMAC
     print("Verification hmac")
     if sign!=sign2:
         print("Erreur de transmission")
     else:
+        #reception du message si verification HMAC valide
         print("Message reçu")
         return dec_msg
 
 
-def sendFile(sender,receiverName,fileName):
+def sendFile(sender,receiverName,fileName): #envoi d'un fichier chiffré (chiffrement de bloc)
+    #taille des blocs et nombre de tournée de Feistel
     BLOCK_SIZE = 64
     ROUNDS = 8
 
-    #recup clé d'envoi
+    #recupération de la clé de chiffrement
     k=string_to_binary(sendKey(sender,receiverName))
-    #k=512 bits
-    #0-256 : key
-    #256-320 : iV
-    #320-512 : hmac
+    #la clé de 512 bits se divise de la facon suivante :
+    #0-256 : clé de chiffrement
+    #256-320 : IV
+    #320-512 : clé HMAC
 
-    #récupère le message (fichier) à chiffrer
+    #récupèration le message (fichier) à chiffrer
     msg=fetch_from_server(sender.name,fileName)
+    #calcul du HMAC du fichier a envoyer
     sign=create_sha256_signature(k[320:512],msg)
-    #convertion du message en binaire
+    #convertion du message en une suite binaire
     msg_bin=string_to_binary(msg)
     msg_bin=padding(msg_bin,BLOCK_SIZE)
-
 
     #IV
     iv_init=k[BLOCK_SIZE*ROUNDS//2:BLOCK_SIZE*(ROUNDS//2+1)]
     iv=iv_init
-    #div en bloc du message
+    #division en bloc du message
     msg_bin_tab=split_to_blocks(msg_bin,BLOCK_SIZE)
-    #div en bloc de la clé
+    #division en bloc de la clé de chiffrement
     sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
-    #tournés de feistel sur les blocs du message mode CBC
+    #Application des tournés de Feistel sur les blocs du message mode CBC
     tab_enc=[""]*len(msg_bin_tab)
-    for i in range(len(msg_bin_tab)):
-        msg_bin_tab[i]=xor(iv,msg_bin_tab[i])
+    for i in range(len(msg_bin_tab)): #pour chaque bloc du message
+        msg_bin_tab[i]=xor(iv,msg_bin_tab[i]) #xor avec l'IV
         msg_bin_tab[i]=bin(msg_bin_tab[i])[2:].zfill(BLOCK_SIZE)
-        tab_enc[i]=feistel_encrypt(msg_bin_tab[i],sub_key,ROUNDS)
-        iv=tab_enc[i]
+        tab_enc[i]=feistel_encrypt(msg_bin_tab[i],sub_key,ROUNDS) #tournées de Feistel
+        iv=tab_enc[i] #IV devient le bloc chiffré précédent
 
-
-    #envoi du chiffré
+    #envoi du fichier chiffré sur le serveur (chiffré en hexadécimal)
     enc_string=""
     for i in range(len(tab_enc)):
         enc_string=enc_string+tab_enc[i]
@@ -733,41 +749,54 @@ def sendFile(sender,receiverName,fileName):
     print("\n"+sender.name+" a envoye le fichier "+fileName+" a "+receiverName)
     print("Fichier chiffré (hexa) : "+binary_to_hexa(enc_string)[2:])
 
-def ReceiveFile(receiver,senderName):
+
+def ReceiveFile(receiver,senderName): #envoi d'un fichier chiffré (chiffrement de bloc)
+    #taille des blocs et nombre de tournée de Feistel
     BLOCK_SIZE = 64
     ROUNDS = 8
 
-    #recup clé de reception
+    #recupération de la clé de déchiffrement
     k=string_to_binary(receiveKey(receiver,senderName))
-    sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
-    #recup du chiffré
+    #la clé de 512 bits se divise de la facon suivante :
+    #0-256 : clé de chiffrement
+    #256-320 : IV
+    #320-512 : clé HMAC
+
+    #récupèration le message (fichier) à déchiffrer
     enc_msg=fetch_from_server(senderName,senderName+"_to_"+receiver.name+".txt")
     remove_from_server(senderName,senderName+"_to_"+receiver.name+".txt")
+    #convertion du message chiffré en une suite binaire
+    #division en bloc du message
     tab_enc=split_to_blocks(hexa_to_binary(enc_msg,BLOCK_SIZE),BLOCK_SIZE)
-
-    #tournés de feistel sur les blocs du chiffré
-    #mode CBC
-    dec_string=""
+    #division en bloc de la clé de déchiffrement
+    sub_key=split_to_blocks(k[0:BLOCK_SIZE*ROUNDS//2],BLOCK_SIZE//2)
     #IV
     iv_init=k[BLOCK_SIZE*ROUNDS//2:BLOCK_SIZE*(ROUNDS//2+1)]
     iv=iv_init
+    
+    #Application des tournés de Feistel sur les blocs du chiffré mode CBC
+    dec_string=""
     tab_dec=[""]*len(tab_enc)
-    for i in range(len(tab_enc)):
-        tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key,ROUNDS)
-        tab_dec[i]=xor(iv,tab_dec[i])
+    for i in range(len(tab_enc)): #pour chaque bloc du message
+        tab_dec[i]=feistel_decrypt(tab_enc[i],sub_key,ROUNDS) #tournées de Feistel
+        tab_dec[i]=xor(iv,tab_dec[i]) #xor avec l'IV
         tab_dec[i]=bin(tab_dec[i])[2:].zfill(BLOCK_SIZE)
-        iv=tab_enc[i]
+        iv=tab_enc[i] #IV devient le bloc déchiffré précédent
         dec_string=dec_string+tab_dec[i]
 
+    #suppression du padding
     msg=binary_to_string(split_to_blocks(dec_string, 8)).rstrip('\x00')
+    #calcul du HMAC du message déchiffré
     sign2=create_sha256_signature(k[320:512],msg)
     sign=fetch_from_server(senderName,"Sign"+senderName+"_to_"+receiver.name+".txt")
     remove_from_server(senderName,"Sign"+senderName+"_to_"+receiver.name+".txt")
     print(receiver.name+" reçoit un fichier de "+senderName)
+    #verification du HMAC
     print("Verification hmac")
     if sign!=sign2:
         print("Erreur de transmission")
     else:
+        #reception du message si verification HMAC valide
         push_to_server(receiver.name,"receiveFile.txt",msg)
         print("Fichier reçu : receiveFile.txt")
 
@@ -787,25 +816,29 @@ Main
 
 
 #MAIN INIT X3DH
-MAX_OTPK=5
+MAX_OTPK=5 #nombre de clé à usage unique à générer
 gen_ValueParam()
+#création de l'utilisateur Alice et de son lot de clé
 alice=Utilisateur("alice")
 generate_bundle(alice)
 publish_bundle(alice)
 
+#création de l'utilisateur Bob et de son lot de clé
 bob=Utilisateur("bob")
 generate_bundle(bob)
 publish_bundle(bob)
 
+#Protocole d'echange de clé X3DH entre Alice et Bob
 x3dh_sender(bob,alice.name)
 x3dh_receiver(alice,bob.name)
 
 #MAIN INIT DOUBLE RATCHET
+#Initialisation des ratchets des utilisateurs Alice et Bob
 init_ratchets(alice,1)
 init_ratchets(bob,2)
 
 
-def actionChoice(sender,receiver):
+def actionChoice(sender,receiver): #menu choix de l'action à effectuer
     val=False
     while(val==False):
         print("\nQue souhaitez vous faire :")
@@ -824,7 +857,7 @@ def actionChoice(sender,receiver):
 
 
 
-def reception(receiver,senderName,type,enc_msg="",sign=""):
+def reception(receiver,senderName,type,enc_msg="",sign=""): #menu reception d'un message/fichier
     val=False
     while(val==False):
         print("\n"+receiver.name+" vous avez reçu un message de "+senderName)
@@ -841,7 +874,7 @@ def reception(receiver,senderName,type,enc_msg="",sign=""):
 
 
 
-while True:
+while True: #menu principal choix utilisateur
     print("\nBonjour, qui êtes vous :")
     choix = input("(1) Alice\n(2) Bob\n(3) Quitter\n")
     if choix =="1":
