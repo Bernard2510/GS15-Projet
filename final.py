@@ -112,21 +112,21 @@ def remove_from_server(username,filename): #supprime un fichier sur le serveur
 Fonction algorithmique pour générations des différentes clés
 ===============================================================
 """
-def concat(x,y):
+def concat(x,y): #Permet de concaténer deux chaines de caractères
     c_x=str(x)
     c_y=str(y)
     return (int(c_x+c_y))
 
 
-def quotient(a,b):
+def quotient(a,b): #Division sans reste
     return a // b
 
 
-def reste(a,b):
+def reste(a,b): #Reste de la division
     return a % b
 
 
-def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itérations de l'algo
+def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itérations de l'algo : test de primalité rabin_miller
     if n==2 or n==3:
         return True
     if n%2==0:
@@ -160,9 +160,9 @@ def rabin_miller(n,k): #Vérifie si n est un nombre premier, k nombre itération
 
 def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
     
-    nombreAlea = secrets.randbits(longueur)
+    nombreAlea = secrets.randbits(longueur) #Génère un nombre avec la librairie secrets
     
-    while gmpy2.is_prime(nombreAlea,25)==False:
+    while gmpy2.is_prime(nombreAlea,25)==False: #Vérifie si le nombres est premier, sinon regénère un nombre jusqu'à qu'il soit premier
         nombreAlea = secrets.randbits(longueur)   
     
     prime=nombreAlea
@@ -172,9 +172,9 @@ def gen_prime(longueur): #Génère un nombre premier suivant sa longueur
 
 def gen_safeprime(): #Génère un nombre fortement premier
     
-    while True:
-        p = gen_prime(2048)
-        if gmpy2.is_prime((p-1)//2)==True:
+    while True: 
+        p = gen_prime(2048) #Génère un nombre premier tant qu'il satisfait la condition d'un nombre fortement premier : tel que q=p-1/2 et que q soit premier
+        if gmpy2.is_prime((p-1)//2)==True: 
             print("p : ",p)
             print(p.bit_length())
             return p
@@ -184,7 +184,7 @@ def gen_elementgen(p): #Génère un élement générateur avec pour paramètre u
     q=(p-1)//2
     while True:
         alpha = secrets.randbits(512)
-        if pow(alpha,2,p)!=1 & pow(alpha,q,p)!=1 & pow(alpha,p-1,p)==1:
+        if pow(alpha,2,p)!=1 & pow(alpha,q,p)!=1 & pow(alpha,p-1,p)==1: #Nombre générateur s'il vérifie alpha^2!=1, alpha^q!=1 et alpha^p-1=1 donc alpha est générateur
             print("alpha:",alpha)
             print("alpha^2:",pow(alpha,2,p))
             print("alpha^q:",pow(alpha,(p-1)//2,p))
@@ -199,7 +199,7 @@ def gen_ValueParam(): #Permet de générer les valeurs p (fortement premier) et 
     
     while True:
         choix = input("Ecrivez (1) pour laisser les valeurs identités par défaut pour démonstration, écrivez (2) pour générer de nouvelles valeurs identités.\n")
-        if choix =="1":
+        if choix =="1": #Si choix 1, alors on prend les paramètres par défaut pour que la génération soit rapide. On choisit p et suivant p on cherche un nombre générateur
             print("Vous avez choisi les paramètres par défaut.")
             p = 25275318963339501038904470567825138989060892737850578690358537231136482965510643268892699094003169567172687775542517182268676187800707418045999665720755350062432181515161865056719921816903657186723467176816222260278298693819846695171242366160403294103543366955861293307465384792437392827099649684774492739181210624829503989085343109951316675541243576941969934847161707999715528313403784352129647086251514324416816696320411947050545430487590651368224606778237019311251049555852486530156354038756890813023254935463876763698020345356943388292880124193038709698210894884428260734105918833601964994252759024480315396597759 #2048  #à générer avec l'algorithme au dessus
             push_to_server("","Value_P.txt",p)
@@ -207,7 +207,7 @@ def gen_ValueParam(): #Permet de générer les valeurs p (fortement premier) et 
             g = gen_elementgen(p) 
             push_to_server("","Value_G.txt",g)
             break
-        if choix =="2":
+        if choix =="2": #Si choix 2, alors on va chercher un nombre fortement premier et un élément générateur lié à ce nombre
             print("Vous avez choisi de générer un nouveau couple de valeurs identités.")
             p = gen_safeprime()
             push_to_server("","Value_P.txt",p)
@@ -221,24 +221,24 @@ def gen_IDkey(): #Permet de générer les clés identités.
 
     p=int(fetch_from_server("","Value_P.txt"))
     g=int(fetch_from_server("","Value_G.txt"))
-    IDpriv = secrets.randbits(2048)
-    IDpub =pow(g,IDpriv,p)
+    IDpriv = secrets.randbits(2048) #Clé privée aléatoire de 2048bits
+    IDpub =pow(g,IDpriv,p) #Clé publique calculé via g^IDpriv mod p
     return IDpriv, IDpub
 
-def gen_key_pair():
+def gen_key_pair(): #Permet de générer un couple de clé privé publique
     p = int(fetch_from_server("","Value_P.txt"))
     g = int(fetch_from_server("","Value_G.txt"))
-    priv = secrets.randbits(512)
-    pub = pow(g,priv,p)
+    priv = secrets.randbits(512) #Clé privée aléatoire de 512 bits
+    pub = pow(g,priv,p) #Clé publique calculé via g^IDpriv mod p
     return priv, pub
 
-def gen_signKey(username,key,IDPrivKey):
-    genkeyDSA(username,IDPrivKey)
+def gen_signKey(username,key,IDPrivKey): #Permet de générer la signature à partir d'une clé privée et d'un message (ici une clé)
+    genkeyDSA(username,IDPrivKey) #On génère les clés nécessaires pour le fonctionnement de la signature DSA
     p = fetch_from_server("","Value_P.txt")
     q = fetch_from_server(username,"PARAMSignPubKey_Q.txt")
     g = fetch_from_server(username,"PARAMSignPubKey_G.txt")
     s1,s2 = signDSA(int(p),int(q),int(g),int(IDPrivKey),str(key)) #ici key représente le message dans la fonction DSA originale
-    return s1,s2
+    return s1,s2 #s1 et s2 sont la signature DSA
 
 """
 ===============================================================
@@ -262,7 +262,7 @@ def genkeyDSA(username,IDpriv): #On génère p, q, k tel que p-1=k*q avec p et q
     print("p: ",p)
     q = (p-1)//2 
     print(rabin_miller(q,25))
-    k = 2
+    k = 2  #k=2 par défaut car nombre fortement premier tel que q=p-1/2 or q=p-1/k initialement
     if(p-1==k*q):
         print("good")
 
@@ -278,7 +278,7 @@ def genkeyDSA(username,IDpriv): #On génère p, q, k tel que p-1=k*q avec p et q
     print("x:",x)
     print("g:",g)
     print("y:",y) 
-#a voir après supprimer les anciennes clés quand on relance le programme
+
     push_to_server(username,"PARAMSignPubKey_P.txt",p)
     push_to_server(username,"PARAMSignPubKey_Q.txt",q)
     push_to_server(username,"PARAMSignPubKey_G.txt",g)
@@ -294,10 +294,10 @@ def signDSA(p,q,g,IDpriv,M): #On signe le message avec la clé privée ID et les
     print("hash :",hash)
 
     s = randrange(1,q)
-    s1 = pow(g,s,p)%q
+    s1 = pow(g,s,p)%q 
     s2 = (hash+s1*x)*pow(s,-1,q)%q 
 
-    while (s1==0 & s2==0):
+    while (s1==0 & s2==0): #tant que s1 et s2 sont égaux à 0, alors on les regénère
         s = randrange(1,q)
         s1 = pow(g,s,p)%q
         s2 = ((hash+s1*x)*pow(s,-1,q))%q
@@ -306,11 +306,11 @@ def signDSA(p,q,g,IDpriv,M): #On signe le message avec la clé privée ID et les
     print("s1: ",s1)
     print("s2 :",s2)
 
-    return s1,s2
+    return s1,s2 #s1,s2 la signature
 
 def verifDSA(s1,s2,p,q,g,y,M): #Permet de vérifier la signature DSA
    
-    if (s1<0 | s1>q) & (s2<0 & s2>q):
+    if (s1<0 | s1>q) & (s2<0 & s2>q):   #Si ne respecte pas ces conditions alors la signature est erronée d'office.
         print("Valeur signature erronée")
         return False
     
@@ -357,7 +357,7 @@ def vernam_chiffrement(message,key): #Prend en paramètres un message str et la 
 
     msg_chiffre=""
     i=0
-    for char in message:
+    for char in message: #On prend le message et on parcourt tous les caractères un par un pour XOR avec la clé.
         msg_chiffre=msg_chiffre+ chr(ord(char)^ ord(keyFormate[i]))
         i+=1
     return msg_chiffre
